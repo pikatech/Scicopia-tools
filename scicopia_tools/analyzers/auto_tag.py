@@ -32,7 +32,7 @@ def auto_tag(doc: str):
 
     '''
     extractor = pke.unsupervised.MultipartiteRank()
-    extractor.load_document(doc=doc, encoding="utf-8")
+    extractor.load_document(input=doc, encoding="utf-8")
     sentences = extractor.sentences
     words = [sentence.words for sentence in sentences]
     meta = [sentence.meta for sentence in sentences]
@@ -45,4 +45,5 @@ def auto_tag(doc: str):
                               threshold=0.74,
                               method='average')
     keyphrases = extractor.get_n_best(n=10)
-    return [key[0] for key in keyphrases], words, meta
+    entrys = {'auto_tags':[key[0] for key in keyphrases],'words':words,'meta':meta}
+    return entrys
