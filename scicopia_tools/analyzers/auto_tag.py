@@ -34,8 +34,6 @@ def auto_tag(doc: str):
     extractor = pke.unsupervised.MultipartiteRank()
     extractor.load_document(input=doc, encoding="utf-8")
     sentences = extractor.sentences
-    words = [sentence.words for sentence in sentences]
-    meta = [sentence.meta for sentence in sentences]
     pos = {'NOUN', 'PROPN', 'ADJ'}
     stoplist = list(string.punctuation)
     stoplist += ['-lrb-', '-rrb-', '-lcb-', '-rcb-', '-lsb-', '-rsb-']
@@ -45,5 +43,5 @@ def auto_tag(doc: str):
                               threshold=0.74,
                               method='average')
     keyphrases = extractor.get_n_best(n=10)
-    entrys = {'auto_tags':[key[0] for key in keyphrases],'words':words,'meta':meta}
+    entrys = {'auto_tags':[key[0] for key in keyphrases]}
     return entrys
