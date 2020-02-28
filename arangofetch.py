@@ -46,7 +46,7 @@ def main(feature):
         doc = collection[key]
         # for each databaseobject add each entry of feature
         data = doc[datadict[feature]]
-        if data is not None:
+        if not data is None:
             data = featuredict[feature](data)
             for field in data:
                 doc[field] = data[field]
