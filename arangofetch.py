@@ -24,12 +24,12 @@ def setup():
     if arangoconn.hasDatabase(config["database"]):
         db = arangoconn[config["database"]]
     else:
-        logging.error(f'Database {config["database"]} not found.')
+        logging.error('Database %s not found.', config["database"])
         
     if db.hasCollection(config["collection"]):
         collection = db[config["collection"]]
     else:
-        logging.error(f'Collection {config["collection"]} not found.')
+        logging.error('Collection %s not found.', config["collection"])
 
     return collection, db, config["collection"]
 
