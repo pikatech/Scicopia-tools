@@ -1,5 +1,7 @@
 import argparse
 import logging
+from typing import Tuple
+from pyArango.collection import Collection
 from pyArango.connection import Connection
 from progress.bar import Bar
 
@@ -7,7 +9,7 @@ from config import read_config
 from scicopia_tools.analyzers.auto_tag import auto_tag
 
 
-def setup():
+def setup() -> Tuple[Collection, Connection, str]:
     config = read_config()
     if "arango_url" in config:
         arangoconn = Connection(
@@ -33,7 +35,7 @@ def setup():
     return collection, db, config["collection"]
 
 
-def main(feature):
+def main(feature: str) -> None:
     collection, db, collectionName = setup()
     featuredict = {"auto_tag": auto_tag}
     datadict = {"auto_tag": "abstract"}
