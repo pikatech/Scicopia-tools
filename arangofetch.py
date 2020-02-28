@@ -2,7 +2,6 @@
 import argparse
 import logging
 from pyArango.connection import Connection
-from pyArango.theExceptions import DocumentNotFoundError, CreationError
 from config import read_config
 from progress.bar import Bar
 
