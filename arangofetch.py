@@ -1,10 +1,9 @@
-
 import argparse
 import logging
 from pyArango.connection import Connection
-from config import read_config
 from progress.bar import Bar
 
+from config import read_config
 from scicopia_tools.analyzers.auto_tag import auto_tag
 
 
@@ -24,25 +23,24 @@ def setup():
     if arangoconn.hasDatabase(config["database"]):
         db = arangoconn[config["database"]]
     else:
-        logging.error('Database %s not found.', config["database"])
-        
+        logging.error("Database %s not found.", config["database"])
+
     if db.hasCollection(config["collection"]):
         collection = db[config["collection"]]
     else:
-        logging.error('Collection %s not found.', config["collection"])
+        logging.error("Collection %s not found.", config["collection"])
 
     return collection, db, config["collection"]
 
 
-
 def main(feature):
-    collection , db, collectionName = setup()
-    featuredict = {'auto_tag':auto_tag}
-    datadict = {'auto_tag':"abstract"}
-    aql = f"FOR x IN {collectionName}  RETURN x._key"
+    collection, db, collectionName = setup()
+    featuredict = {"auto_tag": auto_tag}
+    datadict = {"auto_tag": "abstract"}
+    aql = f"FOR x IN {collectionName} RETURN x._key"
     query = db.AQLQuery(aql, rawResults=True, batchSize=10)
     # cursor error with higher batchSize, reason not found
-    bar = Bar("entries", max=collection.count())
+    progress = Bar("entries", max=collection.count())
     for key in query:
         # query contains the ENTIRE database split in parts by batchSize
         doc = collection[key]
@@ -53,11 +51,12 @@ def main(feature):
             for field in data:
                 doc[field] = data[field]
             doc.save()
-        bar.next()
-    bar.finish()
+        progress.next()
+    progress.finish()
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Use feature to update Arangodatabase')
-    parser.add_argument('feature', choices=['auto_tag'], help='Feature to use.')
-    args = parser.parse_args()
-    main(args.feature)
+
+if __name__ == "__main__":
+    PARSER = argparse.ArgumentParser(description="Use feature to update Arango database")
+    PARSER.add_argument("feature", choices=["auto_tag"], help="Feature to use.")
+    ARGS = PARSER.parse_args()
+    main(ARGS.feature)
