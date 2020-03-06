@@ -14,6 +14,25 @@ import networkx as nx
 
 
 def hearst(text: str) -> List[Tuple[str]]:
+    '''
+    Extended information on the technique can be found in the original paper:
+        
+    Hearst, M. A.
+    Automatic Acquisition of Hyponyms from Large Text Corpora
+    COLING 1992 Volume 2: The 15th International Conference on Computational Linguistics, 1992
+    https://www.aclweb.org/anthology/C92-2082
+
+    Parameters
+    ----------
+    text : str
+        Raw text.
+
+    Returns
+    -------
+    List[Tuple[str]]
+        A list of 3-tuples stating hyponymy relations, e.g. [('X', 'such as', 'Y')].
+
+    '''
     doc = nlp(text)
     edges = []
     for token in doc:
