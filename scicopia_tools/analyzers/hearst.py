@@ -70,30 +70,32 @@ def hearst(text: str) -> List[Tuple[str]]:
 
     """
     doc = NLP(text)
-    edges = []
-    for token in doc:
-        for child in token.children:
-            edges.append((token.i, child.i))
-
-    graph = nx.Graph(edges)
-    candidates = list(doc.noun_chunks)
-    candidates = conflate_conjuncts(candidates)
-
     hits = []
-    for source, target in itertools.combinations(candidates, 2):
-        source_root = source[0].root.i
-        target_root = target[0].root.i
-        logging.debug("%d->%d:", source[0].root.i, target[0].root.i)
-        try:
-            path = nx.shortest_path(graph, source=source_root, target=target_root)
-            logging.debug([doc[x].text for x in path])
-            if (
-                len(path) == 3
-                and doc[path[1]].text == "as"
-                and doc[path[1] - 1].text == "such"
-            ):
-                for t in target:
-                    hits.append((source[0].lemma_, "such as", t.lemma_))
-        except nx.NetworkXNoPath:
-            pass
+
+    for sent in doc.sents:
+        edges = []
+        for token in sent:
+            for child in token.children:
+                edges.append((token.i, child.i))
+    
+        graph = nx.Graph(edges)
+        candidates = list(sent.noun_chunks)
+        candidates = conflate_conjuncts(candidates)
+    
+        for source, target in itertools.combinations(candidates, 2):
+            source_root = source[0].root.i
+            target_root = target[0].root.i
+            logging.debug("%d->%d:", source[0].root.i, target[0].root.i)
+            try:
+                path = nx.shortest_path(graph, source=source_root, target=target_root)
+                logging.debug([doc[x].text for x in path])
+                if (
+                    len(path) == 3
+                    and doc[path[1]].text == "as"
+                    and doc[path[1] - 1].text == "such"
+                ):
+                    for t in target:
+                        hits.append((source[0].lemma_, "such as", t.lemma_))
+            except nx.NetworkXNoPath:
+                pass
     return hits
