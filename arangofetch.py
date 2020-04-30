@@ -7,6 +7,7 @@ from config import read_config
 from progress.bar import Bar
 
 from scicopia_tools.analyzers.auto_tag import auto_tag
+from scicopia_tools.analyzers.abstract_splitter import splitter
 
 
 def setup():
@@ -38,8 +39,8 @@ def setup():
 
 def main(feature):
     collection , db, collectionName = setup()
-    featuredict = {'auto_tag':auto_tag}
-    datadict = {'auto_tag':"abstract"}
+    featuredict = {'auto_tag':auto_tag, 'split':splitter}
+    datadict = {'auto_tag':"abstract", 'split':"abstract"}
     aql = f"FOR x IN {collectionName}  RETURN x._key"
     query = db.AQLQuery(aql, rawResults=True, batchSize=10)
     # cursor error with higher batchSize, reason not found
@@ -59,6 +60,6 @@ def main(feature):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Use feature to update Arangodatabase')
-    parser.add_argument('feature', choices=['auto_tag'], help='Feature to use.')
+    parser.add_argument('feature', choices=['auto_tag', 'split'], help='Feature to use.')
     args = parser.parse_args()
     main(args.feature)
