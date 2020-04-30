@@ -38,8 +38,13 @@ def setup() -> Tuple[Collection, Connection, str]:
 
 def main(feature: str) -> None:
     collection, db, collectionName = setup()
+<<<<<<< HEAD
     featuredict = {"auto_tag": auto_tag, 'split':splitter}
     datadict = {"auto_tag": "abstract", 'split':"abstract"}
+=======
+    featuredict = {"auto_tag": auto_tag}
+    datadict = {"auto_tag": "abstract"}
+>>>>>>> 46893f23769436de2d72bf7fea0e4631dcb730b5
     aql = f"FOR x IN {collectionName} RETURN x._key"
     query = db.AQLQuery(aql, rawResults=True, batchSize=10)
     # cursor error with higher batchSize, reason not found
@@ -60,6 +65,10 @@ def main(feature: str) -> None:
 
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser(description="Use feature to update Arango database")
+<<<<<<< HEAD
     PARSER.add_argument("feature", choices=["auto_tag", 'split'], help="Feature to use.")
+=======
+    PARSER.add_argument("feature", choices=["auto_tag"], help="Feature to use.")
+>>>>>>> 46893f23769436de2d72bf7fea0e4631dcb730b5
     ARGS = PARSER.parse_args()
     main(ARGS.feature)
