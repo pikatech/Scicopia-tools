@@ -5,30 +5,43 @@ Created on Tue Feb 11 13:44:30 2020
 
 @author: tech
 """
-import pke
+import spacy
 
-def splitter(doc: str):
-    '''
-    Splitts the given text in sentences and 
-    return list with tuple of start and end off each sentence.
+class Splitter:
+    
+    def __init__(self, model: str="en_core_web_lg"):
+        '''
+        Loads a spaCy model.
 
-    Parameters
-    ----------
-    doc : str
-        Text to split.
+        Parameters
+        ----------
+        model : str
+            The name of a spyCy model, e.g. "en_core_web_lg".
 
-    Returns
-    -------
-    abstract_offset : list
-        list with tuple of start and end of each sentence
+        Returns
+        -------
+        None.
 
-    '''
-    extractor = pke.unsupervised.MultipartiteRank()
-    extractor.load_document(input=doc, encoding="utf-8")
-    sentences = extractor.sentences
-    meta = [sentence.meta for sentence in sentences]
-    abstract_offset = []
-    for offset in meta:
-        abstract_offset.append((offset["char_offsets"][0][0], offset["char_offsets"][-1][-1]))
+        '''
+        self.nlp = spacy.load(model, disable=["ner"])
+        
+    def split(self, text: str):
+        '''
+        Splits the given text in sentences and 
+        returns a list of tuples of start and end positions of each sentence.
 
-    return {"abstract_offset":abstract_offset}
+        Parameters
+        ----------
+        text : str
+            Text to split.
+
+        Returns
+        -------
+        list
+            List of tuples of start and end positions of each sentence
+
+        '''
+        doc = self.nlp(text)
+        return {"abstract_offsets":
+                [(x.start_char, x.end_char) for x in doc.sents]}
+
