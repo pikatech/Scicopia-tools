@@ -16,16 +16,17 @@ class Splitter:
         Parameters
         ----------
         model : str
-            The name of a spyCy model, e.g. "en_core_web_lg".
+            The name of a spaCy model, e.g. "en_core_web_lg".
 
         Returns
         -------
         None.
 
         '''
-        self.nlp = spacy.load(model, disable=["ner"])
+        self.nlp = spacy.load(model, disable=['ner', 'textcat', 'parser'])
+        self.nlp.add_pipe(self.nlp.create_pipe('sentencizer'))
         
-    def split(self, text: str):
+    def process(self, text: str):
         '''
         Splits the given text in sentences and 
         returns a list of tuples of start and end positions of each sentence.
