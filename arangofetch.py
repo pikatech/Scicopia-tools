@@ -6,8 +6,8 @@ from pyArango.connection import Connection
 from progress.bar import Bar
 
 from config import read_config
-from scicopia_tools.analyzers.auto_tag import auto_tag
-from scicopia_tools.analyzers.abstract_splitter import splitter
+from scicopia_tools.analyzers.AutoTagger import AutoTagger
+from scicopia_tools.analyzers.TextSplitter import TextSplitter
 
 
 def setup() -> Tuple[Collection, Connection, str]:
@@ -38,19 +38,20 @@ def setup() -> Tuple[Collection, Connection, str]:
 
 def main(feature: str) -> None:
     collection, db, collectionName = setup()
-    featuredict = {"auto_tag": auto_tag, 'split':splitter}
-    datadict = {"auto_tag": "abstract", 'split':"abstract"}
+    features = {"auto_tag": AutoTagger, 'split': TextSplitter}
+    section = {"auto_tag": "abstract", 'split': "abstract"}
     aql = f"FOR x IN {collectionName} RETURN x._key"
     query = db.AQLQuery(aql, rawResults=True, batchSize=10)
     # cursor error with higher batchSize, reason not found
     progress = Bar("entries", max=collection.count())
+    analyzer = features[feature]()
     for key in query:
         # query contains the ENTIRE database split in parts by batchSize
         doc = collection[key]
         # for each databaseobject add each entry of feature
-        data = doc[datadict[feature]]
+        data = doc[section[feature]]
         if not data is None:
-            data = featuredict[feature](data)
+            data = analyzer.process(data)
             for field in data:
                 doc[field] = data[field]
             doc.save()
