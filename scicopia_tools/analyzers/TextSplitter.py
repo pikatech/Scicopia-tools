@@ -8,7 +8,7 @@ Created on Tue Feb 11 13:44:30 2020
 import spacy
 
 
-class Splitter:
+class TextSplitter:
     def __init__(self, model: str = "en_core_web_lg"):
         """
         Loads a spaCy model.
