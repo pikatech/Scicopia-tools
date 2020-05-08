@@ -5,15 +5,17 @@ Created on Tue Feb 11 13:44:30 2020
 
 @author: tech
 """
+import spacy
 import pke
 import string
 from nltk.corpus import stopwords
 
+
 class AutoTagger:
-    
-    def __init__(self, model: str="en_core_web_lg"):
-        '''
-        Loads a spaCy model.
+    def __init__(self, model: str = "en_core_web_lg"):
+        """
+        Loads a spaCy model to be used with pke and initializes
+        a MultiPartiteRank model.
 
         Parameters
         ----------
@@ -24,12 +26,13 @@ class AutoTagger:
         -------
         None.
 
-        '''
+        """
         self.extractor = pke.unsupervised.MultipartiteRank()
-
+        self.nlp = spacy.load(model, disable=["ner", "textcat", "parser"])
+        self.nlp.add_pipe(self.nlp.create_pipe("sentencizer"))
 
     def process(self, doc: str):
-        '''
+        """
         Performs MultipartiteRank keyphrase extraction via pke
         (Python Keyphrase Extraction toolkit).
         Details are given in https://arxiv.org/abs/1803.0872 and
@@ -43,17 +46,15 @@ class AutoTagger:
         Returns
         -------
         dict
-            DESCRIPTION.
+            "auto_tags": List of keyphrases.
 
-        '''
-        self.extractor.load_document(input=doc, encoding="utf-8")
-        pos = {'NOUN', 'PROPN', 'ADJ'}
+        """
+        self.extractor.load_document(input=doc, encoding="utf-8", spacy_model=self.nlp)
+        pos = {"NOUN", "PROPN", "ADJ"}
         stoplist = list(string.punctuation)
-        stoplist += ['-lrb-', '-rrb-', '-lcb-', '-rcb-', '-lsb-', '-rsb-']
-        stoplist += stopwords.words('english')
+        stoplist += ["-lrb-", "-rrb-", "-lcb-", "-rcb-", "-lsb-", "-rsb-"]
+        stoplist += stopwords.words("english")
         self.extractor.candidate_selection(pos=pos, stoplist=stoplist)
-        self.extractor.candidate_weighting(alpha=1.1,
-                                  threshold=0.74,
-                                  method='average')
+        self.extractor.candidate_weighting(alpha=1.1, threshold=0.74, method="average")
         keyphrases = self.extractor.get_n_best(n=10)
-        return {'auto_tags':[key[0] for key in keyphrases]}
+        return {"auto_tags": [key[0] for key in keyphrases]}
