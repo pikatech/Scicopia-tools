@@ -51,10 +51,13 @@ def main(feature: str) -> None:
         # for each databaseobject add each entry of feature
         data = doc[section[feature]]
         if not data is None:
-            data = analyzer.process(data)
-            for field in data:
-                doc[field] = data[field]
-            doc.save()
+            try:
+                data = analyzer.process(data)
+                for field in data:
+                    doc[field] = data[field]
+                doc.save()
+            except Exception as e:
+                logging.error("Exception occurred while processing document %s: %s", key, str(e))
         progress.next()
     progress.finish()
 
