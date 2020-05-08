@@ -7,10 +7,10 @@ Created on Tue Feb 11 13:44:30 2020
 """
 import spacy
 
+
 class Splitter:
-    
-    def __init__(self, model: str="en_core_web_lg"):
-        '''
+    def __init__(self, model: str = "en_core_web_lg"):
+        """
         Loads a spaCy model.
 
         Parameters
@@ -22,12 +22,12 @@ class Splitter:
         -------
         None.
 
-        '''
-        self.nlp = spacy.load(model, disable=['ner', 'textcat', 'parser'])
-        self.nlp.add_pipe(self.nlp.create_pipe('sentencizer'))
-        
+        """
+        self.nlp = spacy.load(model, disable=["ner", "textcat", "parser"])
+        self.nlp.add_pipe(self.nlp.create_pipe("sentencizer"))
+
     def process(self, text: str):
-        '''
+        """
         Splits the given text in sentences and 
         returns a list of tuples of start and end positions of each sentence.
 
@@ -41,8 +41,6 @@ class Splitter:
         list
             List of tuples of start and end positions of each sentence
 
-        '''
+        """
         doc = self.nlp(text)
-        return {"abstract_offsets":
-                [(x.start_char, x.end_char) for x in doc.sents]}
-
+        return {"abstract_offsets": [(x.start_char, x.end_char) for x in doc.sents]}
