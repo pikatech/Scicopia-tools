@@ -41,7 +41,7 @@ def main(feature: str) -> None:
     features = {"auto_tag": AutoTagger, 'split': TextSplitter}
     section = {"auto_tag": "abstract", 'split': "abstract"}
     aql = f"FOR x IN {collectionName} RETURN x._key"
-    query = db.AQLQuery(aql, rawResults=True, batchSize=100)
+    query = db.AQLQuery(aql, rawResults=True, batchSize=100, ttl=3600)
     # cursor error with higher batchSize, reason not found
     progress = Bar("entries", max=collection.count())
     analyzer = features[feature]()
