@@ -14,8 +14,7 @@ from nltk.corpus import stopwords
 class AutoTagger:
     def __init__(self, model: str = "en_core_web_lg"):
         """
-        Loads a spaCy model to be used with pke and initializes
-        a MultiPartiteRank model.
+        Loads a spaCy model to be used with pke.
 
         Parameters
         ----------
@@ -27,7 +26,6 @@ class AutoTagger:
         None.
 
         """
-        self.extractor = pke.unsupervised.MultipartiteRank()
         self.nlp = spacy.load(model, disable=["ner", "textcat", "parser"])
         self.nlp.add_pipe(self.nlp.create_pipe("sentencizer"))
 
@@ -49,12 +47,15 @@ class AutoTagger:
             "auto_tags": List of keyphrases.
 
         """
-        self.extractor.load_document(input=doc, encoding="utf-8", spacy_model=self.nlp)
+        # Use a new MultiPartiteRank every time.
+        # Trying to reuse one leads to a ZeroDivisionError: float division by zero
+        extractor = pke.unsupervised.MultipartiteRank()
+        extractor.load_document(input=doc, encoding="utf-8", spacy_model=self.nlp)
         pos = {"NOUN", "PROPN", "ADJ"}
         stoplist = list(string.punctuation)
         stoplist += ["-lrb-", "-rrb-", "-lcb-", "-rcb-", "-lsb-", "-rsb-"]
         stoplist += stopwords.words("english")
-        self.extractor.candidate_selection(pos=pos, stoplist=stoplist)
-        self.extractor.candidate_weighting(alpha=1.1, threshold=0.74, method="average")
-        keyphrases = self.extractor.get_n_best(n=10)
+        extractor.candidate_selection(pos=pos, stoplist=stoplist)
+        extractor.candidate_weighting(alpha=1.1, threshold=0.74, method="average")
+        keyphrases = extractor.get_n_best(n=10)
         return {"auto_tags": [key[0] for key in keyphrases]}
