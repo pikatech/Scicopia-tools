@@ -6,8 +6,8 @@ from pyArango.connection import Connection
 from progress.bar import Bar
 
 from config import read_config
-from scicopia_tools.analyzers.auto_tag import auto_tag
-from scicopia_tools.analyzers.abstract_splitter import splitter
+from analyzers.AutoTagger import AutoTagger
+from analyzers.TextSplitter import TextSplitter
 
 
 def setup() -> Tuple[Collection, Connection, str]:
@@ -38,22 +38,26 @@ def setup() -> Tuple[Collection, Connection, str]:
 
 def main(feature: str) -> None:
     collection, db, collectionName = setup()
-    featuredict = {"auto_tag": auto_tag, 'split':splitter}
-    datadict = {"auto_tag": "abstract", 'split':"abstract"}
+    features = {"auto_tag": AutoTagger, 'split': TextSplitter}
+    section = {"auto_tag": "abstract", 'split': "abstract"}
     aql = f"FOR x IN {collectionName} RETURN x._key"
-    query = db.AQLQuery(aql, rawResults=True, batchSize=10)
+    query = db.AQLQuery(aql, rawResults=True, batchSize=100, ttl=3600)
     # cursor error with higher batchSize, reason not found
     progress = Bar("entries", max=collection.count())
+    analyzer = features[feature]()
     for key in query:
         # query contains the ENTIRE database split in parts by batchSize
         doc = collection[key]
         # for each databaseobject add each entry of feature
-        data = doc[datadict[feature]]
+        data = doc[section[feature]]
         if not data is None:
-            data = featuredict[feature](data)
-            for field in data:
-                doc[field] = data[field]
-            doc.save()
+            try:
+                data = analyzer.process(data)
+                for field in data:
+                    doc[field] = data[field]
+                doc.save()
+            except Exception as e:
+                logging.error("Exception occurred while processing document %s: %s", key, str(e))
         progress.next()
     progress.finish()
 

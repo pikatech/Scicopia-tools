@@ -1,0 +1,8 @@
+git+https://github.com/boudinfl/pke.git@ab01b94c19f8c5e23cb65f2a3a24950dd2b86083
+nltk
+pytest
+progress
+dask
+distributed
+dask-jobqueue
+pyArango
