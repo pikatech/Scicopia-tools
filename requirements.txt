@@ -5,4 +5,5 @@ progress
 dask
 distributed
 dask-jobqueue
+streamz
 pyArango
