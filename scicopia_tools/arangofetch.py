@@ -1,6 +1,6 @@
 import argparse
 import logging
-from typing import Tuple
+from typing import List, Tuple
 from pyArango.collection import Collection
 from pyArango.connection import Connection
 from progress.bar import Bar
@@ -9,12 +9,22 @@ from config import read_config
 from analyzers.AutoTagger import AutoTagger
 from analyzers.TextSplitter import TextSplitter
 
+from itertools import zip_longest
 import multiprocessing
 from dask.distributed import Client, LocalCluster
 from streamz import Stream
 
 features = {"auto_tag": AutoTagger, "split": TextSplitter}
 section = {"auto_tag": "abstract", "split": "abstract"}
+BATCHSIZE = 100
+
+
+def grouper(iterable, n: int):
+    # https://docs.python.org/3/library/itertools.html#recipes
+    "Collect data into fixed-length chunks or blocks"
+    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
+    args = [iter(iterable)] * n
+    return zip_longest(*args, fillvalue=None)
 
 
 class DocTransformer:
@@ -63,17 +73,21 @@ class DocTransformer:
         cluster = LocalCluster(n_workers=parallel)
         client = Client(cluster)
         source = Stream()
-        source.scatter().map(self.process_doc).buffer(10).gather()
-        query = self.db.AQLQuery(self.AQL, rawResults=True, batchSize=100, ttl=3600)
+        source.scatter().map(self.process_parallel).gather()
+        query = self.db.AQLQuery(
+            self.AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600
+        )
         progress = Bar("entries", max=self.collection.count())
-        for key in query:
+        for keys in grouper(query, BATCHSIZE):
             # query contains the ENTIRE database split in parts by batchSize
-            source.emit(key)
+            source.emit(keys)
             progress.next()
         progress.finish()
 
     def main(self) -> None:
-        query = self.db.AQLQuery(self.AQL, rawResults=True, batchSize=100, ttl=3600)
+        query = self.db.AQLQuery(
+            self.AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600
+        )
         progress = Bar("entries", max=self.collection.count())
         for key in query:
             # query contains the ENTIRE database split in parts by batchSize
@@ -95,6 +109,25 @@ class DocTransformer:
                 logging.error(
                     "Exception occurred while processing document %s: %s", key, str(e)
                 )
+
+    def process_parallel(self, keys: List[str]):
+        self.collection, self.db, self.collectionName = self.setup()
+        for key in keys:
+            doc = self.collection[key]
+            # for each database object add each entry of feature
+            data = doc[self.section[self.feature]]
+            if not data is None:
+                try:
+                    data = self.analyzer.process(data)
+                    for field in data:
+                        doc[field] = data[field]
+                    doc.save()
+                except Exception as e:
+                    logging.error(
+                        "Exception occurred while processing document %s: %s",
+                        key,
+                        str(e),
+                    )
 
 
 if __name__ == "__main__":
