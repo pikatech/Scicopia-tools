@@ -84,6 +84,27 @@ class DocTransformer:
             progress.next()
         progress.finish()
 
+    def process_parallel(self, keys: List[str]):
+        self.collection, self.db, self.collectionName = self.setup()
+        for key in keys:
+            doc = self.collection[key]
+            # for each database object add each entry of feature
+            data = doc[section[self.feature]]
+            if not data is None:
+                try:
+                    data = self.analyzer.process(data)
+                    for field in data:
+                        doc[field] = data[field]
+                    doc.patch()
+                except Exception as e:
+                    logging.error(
+                        "Exception occurred while processing document %s: %s",
+                        key,
+                        str(e),
+                    )
+            else:
+                print(f"Document {key} has None for {self.feature}")
+
     def main(self) -> None:
         query = self.db.AQLQuery(
             self.AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600
@@ -98,36 +119,17 @@ class DocTransformer:
     def process_doc(self, key: str):
         doc = self.collection[key]
         # for each database object add each entry of feature
-        data = doc[self.section[self.feature]]
+        data = doc[section[self.feature]]
         if not data is None:
             try:
                 data = self.analyzer.process(data)
                 for field in data:
                     doc[field] = data[field]
-                doc.save()
+                doc.patch()
             except Exception as e:
                 logging.error(
                     "Exception occurred while processing document %s: %s", key, str(e)
                 )
-
-    def process_parallel(self, keys: List[str]):
-        self.collection, self.db, self.collectionName = self.setup()
-        for key in keys:
-            doc = self.collection[key]
-            # for each database object add each entry of feature
-            data = doc[self.section[self.feature]]
-            if not data is None:
-                try:
-                    data = self.analyzer.process(data)
-                    for field in data:
-                        doc[field] = data[field]
-                    doc.save()
-                except Exception as e:
-                    logging.error(
-                        "Exception occurred while processing document %s: %s",
-                        key,
-                        str(e),
-                    )
 
 
 if __name__ == "__main__":
