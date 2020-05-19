@@ -128,11 +128,12 @@ class DocTransformer:
         Analyzer = features[self.feature]
         AQL = f"FOR x IN {self.collectionName} FILTER x.{Analyzer.field} == null RETURN x._key"
         query = self.db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
-        progress = Bar("entries", max=self.collection.count())
+        unfinished = query.response["extra"]["stats"]["filtered"]
+        progress = Bar("entries", max=unfinished)
         for keys in grouper(query, BATCHSIZE):
-            # query contains the ENTIRE database split in parts by batchSize
             source.emit(keys)
-            progress.next()
+            unfinished -= len(keys)
+            progress.next(len(keys) if len(keys) < unfinished else unfinished)
         progress.finish()
 
     def main(self) -> None:
