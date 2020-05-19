@@ -75,11 +75,10 @@ def worker_setup(feature, dask_worker):
     dask_worker.analyzer = features[feature]()
 
 
-def process_parallel(keys: List[str]):
+def process_parallel(docs: List[str]):
     worker = get_worker()
-    docs = deque(maxlen=len(keys))
-    for key in keys:
-        doc = worker.collection[key]
+    docs = deque(maxlen=len(docs))
+    for doc in docs:
         # for each database object add each entry of feature
         data = doc[worker.analyzer.doc_section]
         if not data is None:
@@ -89,11 +88,11 @@ def process_parallel(keys: List[str]):
                     doc[field] = data[field]
                 docs.append(doc)
             except Exception as e:
-                error = f"Exception occurred while processing document {key}: {str(e)}"
+                error = f"Exception occurred while processing document {doc['_key']}: {str(e)}"
                 logging.error(error)
                 return ("error", error)
         else:
-            print(f"Document {key} has None for {worker.feature}")
+            print(f"Document {doc['key']} has None for {worker.feature}")
     try:
         worker.collection.bulkSave(docs, details=True, onDuplicate="update")
     except UpdateError as e:
@@ -125,17 +124,17 @@ class DocTransformer:
         source = Stream()
         source.scatter().map(process_parallel).gather().sink(log)
         Analyzer = features[self.feature]
-        AQL = f"FOR x IN {self.collectionName} FILTER x.{Analyzer.field} == null RETURN x._key"
+        AQL = f"FOR x IN {self.collectionName} FILTER x.{Analyzer.field} == null RETURN {{ '_key': x._key, 'doc_section': x.{Analyzer.doc_section} }}"
         query = self.db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
         unfinished = (
             query.response["extra"]["stats"]["scannedFull"]
             - query.response["extra"]["stats"]["filtered"]
         )
         progress = Bar("entries", max=unfinished)
-        for keys in grouper(query, BATCHSIZE):
-            source.emit(keys)
-            unfinished -= len(keys)
-            progress.next(len(keys) if len(keys) < unfinished else unfinished)
+        for docs in grouper(query, BATCHSIZE):
+            source.emit(docs)
+            unfinished -= len(docs)
+            progress.next(len(docs) if len(docs) < unfinished else unfinished)
         progress.finish()
 
     def main(self) -> None:
