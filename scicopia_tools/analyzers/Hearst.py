@@ -18,6 +18,7 @@ import networkx as nx
 
 class Hearst:
     field = "hearst"
+    doc_section = "abstract"
     
     def __init__(self, model: str = "en_core_web_lg"):
         """

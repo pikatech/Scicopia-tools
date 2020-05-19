@@ -17,7 +17,6 @@ from dask.distributed import Client, LocalCluster, get_worker
 from streamz import Stream
 
 features = {"auto_tag": AutoTagger, "split": TextSplitter}
-section = {"auto_tag": "abstract", "split": "abstract"}
 BATCHSIZE = 100
 
 
@@ -82,7 +81,7 @@ def process_parallel(keys: List[str]):
     for key in keys:
         doc = worker.collection[key]
         # for each database object add each entry of feature
-        data = doc[section[worker.feature]]
+        data = doc[worker.analyzer.doc_section]
         if not data is None:
             try:
                 data = worker.analyzer.process(data)
@@ -151,7 +150,7 @@ class DocTransformer:
     def process_doc(self, key: str):
         doc = self.collection[key]
         # for each database object add each entry of feature
-        data = doc[section[self.feature]]
+        data = doc[self.analyzer.doc_section]
         if not data is None:
             try:
                 data = self.analyzer.process(data)

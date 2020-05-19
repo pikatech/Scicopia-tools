@@ -13,6 +13,7 @@ from nltk.corpus import stopwords
 
 class AutoTagger:
     field = "auto_tags"
+    doc_section = "abstract"
     
     def __init__(self, model: str = "en_core_web_lg"):
         """

@@ -10,6 +10,7 @@ import spacy
 
 class TextSplitter:
     field = "abstract_offsets"
+    doc_section = "abstract"
     
     def __init__(self, model: str = "en_core_web_lg"):
         """
