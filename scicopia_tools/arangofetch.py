@@ -1,6 +1,6 @@
 import argparse
 import logging
-from typing import List, Tuple
+from typing import Dict, Tuple
 from pyArango.collection import Collection
 from pyArango.connection import Connection
 from pyArango.theExceptions import UpdateError
@@ -75,30 +75,29 @@ def worker_setup(feature, dask_worker):
     dask_worker.analyzer = features[feature]()
 
 
-def process_parallel(docs: List[str]):
+def process_parallel(docs: Tuple[Dict[str, str]]):
     worker = get_worker()
-    docs = deque(maxlen=len(docs))
+    updates = deque(maxlen=len(docs))
     for doc in docs:
         # for each database object add each entry of feature
-        data = doc[worker.analyzer.doc_section]
+        data = doc["doc_section"]
         if not data is None:
             try:
                 data = worker.analyzer.process(data)
-                for field in data:
-                    doc[field] = data[field]
-                docs.append(doc)
+                data["_key"] = doc["_key"]
+                updates.append(data)
             except Exception as e:
                 error = f"Exception occurred while processing document {doc['_key']}: {str(e)}"
                 logging.error(error)
                 return ("error", error)
         else:
-            print(f"Document {doc['key']} has None for {worker.feature}")
+            print(f"Document {doc['_key']} has None for {worker.feature}")
     try:
-        worker.collection.bulkSave(docs, details=True, onDuplicate="update")
+        worker.collection.bulkSave(updates, details=True, onDuplicate="update")
     except UpdateError as e:
         return ("error", e.message)
     finally:
-        docs.clear()
+        updates.clear()
 
 
 class DocTransformer:
@@ -122,7 +121,7 @@ class DocTransformer:
         client.run(worker_setup, self.feature)
 
         source = Stream()
-        source.scatter().map(process_parallel).gather().sink(log)
+        source.scatter().map(process_parallel).buffer(parallel*2).gather().sink(log)
         Analyzer = features[self.feature]
         AQL = f"FOR x IN {self.collectionName} FILTER x.{Analyzer.field} == null RETURN {{ '_key': x._key, 'doc_section': x.{Analyzer.doc_section} }}"
         query = self.db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
@@ -133,8 +132,7 @@ class DocTransformer:
         progress = Bar("entries", max=unfinished)
         for docs in grouper(query, BATCHSIZE):
             source.emit(docs)
-            unfinished -= len(docs)
-            progress.next(len(docs) if len(docs) < unfinished else unfinished)
+            progress.next(len(docs))
         progress.finish()
 
     def main(self) -> None:
