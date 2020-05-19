@@ -12,6 +12,8 @@ from nltk.corpus import stopwords
 
 
 class AutoTagger:
+    field = "auto_tags"
+    
     def __init__(self, model: str = "en_core_web_lg"):
         """
         Loads a spaCy model to be used with pke.
@@ -58,4 +60,4 @@ class AutoTagger:
         extractor.candidate_selection(pos=pos, stoplist=stoplist)
         extractor.candidate_weighting(alpha=1.1, threshold=0.74, method="average")
         keyphrases = extractor.get_n_best(n=10)
-        return {"auto_tags": [key[0] for key in keyphrases]}
+        return {AutoTagger.field: [key[0] for key in keyphrases]}

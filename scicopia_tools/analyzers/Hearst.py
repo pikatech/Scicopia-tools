@@ -17,6 +17,8 @@ import networkx as nx
 
 
 class Hearst:
+    field = "hearst"
+    
     def __init__(self, model: str = "en_core_web_lg"):
         """
         Loads a spaCy model.
@@ -119,4 +121,4 @@ class Hearst:
                             hits.append((source[0].lemma_, "such as", t.lemma_))
                 except nx.NetworkXNoPath:
                     pass
-        return hits
+        return {Hearst.field: hits}

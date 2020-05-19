@@ -116,7 +116,8 @@ class DocTransformer:
         
         source = Stream()
         source.scatter().map(process_parallel).gather().sink(log)
-        AQL = f"FOR x IN {self.collectionName} RETURN x._key"
+        Analyzer = features[self.feature]
+        AQL = f"FOR x IN {self.collectionName} FILTER x.{Analyzer.field} == null RETURN x._key"
         query = self.db.AQLQuery(
             AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600
         )
@@ -128,8 +129,9 @@ class DocTransformer:
         progress.finish()
 
     def main(self) -> None:
-        AQL = f"FOR x IN {self.collectionName} RETURN x._key"
-        self.analyzer = features[self.feature]()
+        Analyzer = features[self.feature]
+        AQL = f"FOR x IN {self.collectionName} FILTER x.{Analyzer.field} == null RETURN x._key"
+        self.analyzer = Analyzer()
         query = self.db.AQLQuery(
             AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600
         )

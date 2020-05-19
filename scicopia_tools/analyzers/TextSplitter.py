@@ -9,6 +9,8 @@ import spacy
 
 
 class TextSplitter:
+    field = "abstract_offsets"
+    
     def __init__(self, model: str = "en_core_web_lg"):
         """
         Loads a spaCy model.
@@ -43,4 +45,4 @@ class TextSplitter:
 
         """
         doc = self.nlp(text)
-        return {"abstract_offsets": [(x.start_char, x.end_char) for x in doc.sents]}
+        return {TextSplitter.field: [(x.start_char, x.end_char) for x in doc.sents]}
