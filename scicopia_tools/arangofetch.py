@@ -79,7 +79,8 @@ def process_parallel(docs: Tuple[Dict[str, str]]):
     worker = get_worker()
     updates = deque(maxlen=len(docs))
     for doc in docs:
-        # for each database object add each entry of feature
+        if doc is None:
+            continue
         data = doc["doc_section"]
         if not data is None:
             try:
