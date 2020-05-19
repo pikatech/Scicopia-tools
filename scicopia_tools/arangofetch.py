@@ -3,12 +3,14 @@ import logging
 from typing import List, Tuple
 from pyArango.collection import Collection
 from pyArango.connection import Connection
+from pyArango.theExceptions import UpdateError
 from progress.bar import Bar
 
 from config import read_config
 from analyzers.AutoTagger import AutoTagger
 from analyzers.TextSplitter import TextSplitter
 
+from collections import deque
 from itertools import zip_longest
 import multiprocessing
 from dask.distributed import Client, LocalCluster, get_worker
@@ -27,7 +29,7 @@ def grouper(iterable, n: int):
     return zip_longest(*args, fillvalue=None)
 
 
-def log(level: str, message: str=""):
+def log(level: str, message: str = ""):
     if level is None:
         return
     if level == "critical":
@@ -72,10 +74,11 @@ def worker_setup(feature, dask_worker):
     dask_worker.collection, dask_worker.db, dask_worker.collectionName = setup()
     dask_worker.feature = feature
     dask_worker.analyzer = features[feature]()
- 
+
 
 def process_parallel(keys: List[str]):
     worker = get_worker()
+    docs = deque(maxlen=len(keys))
     for key in keys:
         doc = worker.collection[key]
         # for each database object add each entry of feature
@@ -85,15 +88,21 @@ def process_parallel(keys: List[str]):
                 data = worker.analyzer.process(data)
                 for field in data:
                     doc[field] = data[field]
-                doc.patch()
+                docs.append(doc)
             except Exception as e:
                 error = f"Exception occurred while processing document {key}: {str(e)}"
                 logging.error(error)
                 return ("error", error)
         else:
             print(f"Document {key} has None for {worker.feature}")
+    try:
+        worker.collection.bulkSave(docs, details=True, onDuplicate="update")
+    except UpdateError as e:
+        return ("error", e.message)
+    finally:
+        docs.clear()
 
-        
+
 class DocTransformer:
     def __init__(self, feature: str):
         self.collection, self.db, self.collectionName = setup()
@@ -113,14 +122,12 @@ class DocTransformer:
         cluster = LocalCluster(n_workers=parallel)
         client = Client(cluster)
         client.run(worker_setup, self.feature)
-        
+
         source = Stream()
         source.scatter().map(process_parallel).gather().sink(log)
         Analyzer = features[self.feature]
         AQL = f"FOR x IN {self.collectionName} FILTER x.{Analyzer.field} == null RETURN x._key"
-        query = self.db.AQLQuery(
-            AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600
-        )
+        query = self.db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
         progress = Bar("entries", max=self.collection.count())
         for keys in grouper(query, BATCHSIZE):
             # query contains the ENTIRE database split in parts by batchSize
@@ -132,9 +139,7 @@ class DocTransformer:
         Analyzer = features[self.feature]
         AQL = f"FOR x IN {self.collectionName} FILTER x.{Analyzer.field} == null RETURN x._key"
         self.analyzer = Analyzer()
-        query = self.db.AQLQuery(
-            AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600
-        )
+        query = self.db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
         progress = Bar("entries", max=self.collection.count())
         for key in query:
             # query contains the ENTIRE database split in parts by batchSize
