@@ -127,7 +127,7 @@ class DocTransformer:
         Analyzer = features[self.feature]
         AQL = f"FOR x IN {self.collectionName} FILTER x.{Analyzer.field} == null RETURN x._key"
         query = self.db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
-        unfinished = query.response["extra"]["stats"]["filtered"]
+        unfinished = query.response["extra"]["stats"]["scannedFull"] - query.response["extra"]["stats"]["filtered"]
         progress = Bar("entries", max=unfinished)
         for keys in grouper(query, BATCHSIZE):
             source.emit(keys)
