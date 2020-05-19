@@ -38,6 +38,9 @@ instance/
 # Sphinx documentation
 docs/_build/
 
+# Dask
+dask-worker-space/
+
 # pyenv
 .python-version
 
