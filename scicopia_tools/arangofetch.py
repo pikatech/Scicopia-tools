@@ -130,6 +130,9 @@ class DocTransformer:
             query.response["extra"]["stats"]["scannedFull"]
             - query.response["extra"]["stats"]["filtered"]
         )
+        if unfinished == 0:
+            logging.info("Nothing to be done. Task %s completed.", self.feature)
+            return
         progress = Bar("entries", max=unfinished)
         for docs in grouper(query, BATCHSIZE):
             source.emit(docs)
