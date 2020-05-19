@@ -1,0 +1,9 @@
+{
+  "date": "2222-02-02",
+  "year": "2222",
+  "setSpec": "{bogus:test-doc}",
+  "title": "Lorem ipsum",
+  "author": "John Smith",
+  "subject": "{Artificial Literature}",
+  "abstract": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. In ac rutrum quam. Donec vel nunc ac magna aliquam vulputate. Suspendisse potenti. Nullam in velit pulvinar, feugiat justo sed, malesuada nunc. Curabitur non urna id nisl hendrerit ullamcorper id quis urna. Pellentesque aliquam vestibulum efficitur. Praesent et metus et tellus scelerisque lacinia ut id quam. Quisque varius turpis faucibus cursus interdum. Pellentesque consectetur turpis non dictum facilisis."
+}
