@@ -11,7 +11,7 @@ from analyzers.TextSplitter import TextSplitter
 
 from itertools import zip_longest
 import multiprocessing
-from dask.distributed import Client, LocalCluster
+from dask.distributed import Client, LocalCluster, get_worker
 from streamz import Stream
 
 features = {"auto_tag": AutoTagger, "split": TextSplitter}
@@ -27,37 +27,77 @@ def grouper(iterable, n: int):
     return zip_longest(*args, fillvalue=None)
 
 
+def log(level: str, message: str=""):
+    if level is None:
+        return
+    if level == "critical":
+        logging.critical(message)
+    elif level == "error":
+        logging.error(message)
+    elif level == "warning":
+        logging.warning(message)
+    elif level == "info":
+        logging.info(message)
+    elif level == "debug":
+        logging.debug(message)
+
+
+def setup() -> Tuple[Collection, Connection, str]:
+    config = read_config()
+    if "arango_url" in config:
+        arangoconn = Connection(
+            arangoURL=config["arango_url"],
+            username=config["username"],
+            password=config["password"],
+        )
+    else:
+        arangoconn = Connection(
+            username=config["username"], password=config["password"]
+        )
+
+    if arangoconn.hasDatabase(config["database"]):
+        db = arangoconn[config["database"]]
+    else:
+        logging.error("Database %s not found.", config["database"])
+
+    if db.hasCollection(config["collection"]):
+        collection = db[config["collection"]]
+    else:
+        logging.error("Collection %s not found.", config["collection"])
+
+    return collection, db, config["collection"]
+
+
+def worker_setup(feature, dask_worker):
+    dask_worker.collection, dask_worker.db, dask_worker.collectionName = setup()
+    dask_worker.feature = feature
+    dask_worker.analyzer = features[feature]()
+ 
+
+def process_parallel(keys: List[str]):
+    worker = get_worker()
+    for key in keys:
+        doc = worker.collection[key]
+        # for each database object add each entry of feature
+        data = doc[section[worker.feature]]
+        if not data is None:
+            try:
+                data = worker.analyzer.process(data)
+                for field in data:
+                    doc[field] = data[field]
+                doc.patch()
+            except Exception as e:
+                error = f"Exception occurred while processing document {key}: {str(e)}"
+                logging.error(error)
+                return ("error", error)
+        else:
+            print(f"Document {key} has None for {worker.feature}")
+
+        
 class DocTransformer:
     def __init__(self, feature: str):
-        self.collection, self.db, self.collectionName = self.setup()
-        self.AQL = f"FOR x IN {self.collectionName} RETURN x._key"
+        self.collection, self.db, self.collectionName = setup()
         self.feature = feature
-        self.analyzer = features[feature]()
-
-    def setup(self) -> Tuple[Collection, Connection, str]:
-        config = read_config()
-        if "arango_url" in config:
-            arangoconn = Connection(
-                arangoURL=config["arango_url"],
-                username=config["username"],
-                password=config["password"],
-            )
-        else:
-            arangoconn = Connection(
-                username=config["username"], password=config["password"]
-            )
-
-        if arangoconn.hasDatabase(config["database"]):
-            db = arangoconn[config["database"]]
-        else:
-            logging.error("Database %s not found.", config["database"])
-
-        if db.hasCollection(config["collection"]):
-            collection = db[config["collection"]]
-        else:
-            logging.error("Collection %s not found.", config["collection"])
-
-        return collection, db, config["collection"]
 
     def parallel_main(self, parallel: int):
         if parallel <= 0:
@@ -72,10 +112,13 @@ class DocTransformer:
             parallel = multiprocessing.cpu_count()
         cluster = LocalCluster(n_workers=parallel)
         client = Client(cluster)
+        client.run(worker_setup, self.feature)
+        
         source = Stream()
-        source.scatter().map(self.process_parallel).gather()
+        source.scatter().map(process_parallel).gather().sink(log)
+        AQL = f"FOR x IN {self.collectionName} RETURN x._key"
         query = self.db.AQLQuery(
-            self.AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600
+            AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600
         )
         progress = Bar("entries", max=self.collection.count())
         for keys in grouper(query, BATCHSIZE):
@@ -84,30 +127,11 @@ class DocTransformer:
             progress.next()
         progress.finish()
 
-    def process_parallel(self, keys: List[str]):
-        self.collection, self.db, self.collectionName = self.setup()
-        for key in keys:
-            doc = self.collection[key]
-            # for each database object add each entry of feature
-            data = doc[section[self.feature]]
-            if not data is None:
-                try:
-                    data = self.analyzer.process(data)
-                    for field in data:
-                        doc[field] = data[field]
-                    doc.patch()
-                except Exception as e:
-                    logging.error(
-                        "Exception occurred while processing document %s: %s",
-                        key,
-                        str(e),
-                    )
-            else:
-                print(f"Document {key} has None for {self.feature}")
-
     def main(self) -> None:
+        AQL = f"FOR x IN {self.collectionName} RETURN x._key"
+        self.analyzer = features[self.feature]()
         query = self.db.AQLQuery(
-            self.AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600
+            AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600
         )
         progress = Bar("entries", max=self.collection.count())
         for key in query:
