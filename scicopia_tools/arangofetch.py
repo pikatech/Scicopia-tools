@@ -43,7 +43,7 @@ def log(level: str, message: str = ""):
         logging.debug(message)
 
 
-def setup() -> Tuple[Collection, Connection, str]:
+def setup() -> Tuple[Collection, Connection]:
     config = read_config()
     if "arango_url" in config:
         arangoconn = Connection(
@@ -70,7 +70,7 @@ def setup() -> Tuple[Collection, Connection, str]:
 
 
 def worker_setup(feature, dask_worker):
-    dask_worker.collection, dask_worker.db, dask_worker.collectionName = setup()
+    dask_worker.collection, dask_worker.db = setup()
     dask_worker.feature = feature
     dask_worker.analyzer = features[feature]()
 
@@ -129,8 +129,7 @@ class DocTransformer:
         source = Stream()
         source.scatter().map(process_parallel).buffer(parallel * 2).gather().sink(log)
         Analyzer = features[self.feature]
-        AQL = f"FOR x IN {self.collectionName} FILTER x.{Analyzer.field} == null RETURN {{ '_key': x._key, 'doc_section': x.{Analyzer.doc_section} }}"
-        query = self.db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
+        query = generate_query(self.collection.name, self.db, Analyzer)
         unfinished = (
             query.response["extra"]["stats"]["scannedFull"]
             - query.response["extra"]["stats"]["filtered"]
@@ -146,7 +145,7 @@ class DocTransformer:
 
     def main(self) -> None:
         Analyzer = features[self.feature]
-        query = generate_query(self.collectionName, self.db, Analyzer)
+        query = generate_query(self.collection.name, self.db, Analyzer)
         self.analyzer = Analyzer()
         progress = Bar("entries", max=self.collection.count())
         for key in query:
