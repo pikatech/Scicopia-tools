@@ -101,6 +101,11 @@ def process_parallel(docs: Tuple[Dict[str, str]]):
         updates.clear()
 
 
+def generate_query(collection: str, db, Analyzer):
+    AQL = f"FOR x IN {collection} FILTER x.{Analyzer.field} == null RETURN x._key"
+    return db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
+
+
 class DocTransformer:
     def __init__(self, feature: str):
         self.collection, self.db, self.collectionName = setup()
@@ -122,7 +127,7 @@ class DocTransformer:
         client.run(worker_setup, self.feature)
 
         source = Stream()
-        source.scatter().map(process_parallel).buffer(parallel*2).gather().sink(log)
+        source.scatter().map(process_parallel).buffer(parallel * 2).gather().sink(log)
         Analyzer = features[self.feature]
         AQL = f"FOR x IN {self.collectionName} FILTER x.{Analyzer.field} == null RETURN {{ '_key': x._key, 'doc_section': x.{Analyzer.doc_section} }}"
         query = self.db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
@@ -141,9 +146,8 @@ class DocTransformer:
 
     def main(self) -> None:
         Analyzer = features[self.feature]
-        AQL = f"FOR x IN {self.collectionName} FILTER x.{Analyzer.field} == null RETURN x._key"
+        query = generate_query(self.collectionName, self.db, Analyzer)
         self.analyzer = Analyzer()
-        query = self.db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
         progress = Bar("entries", max=self.collection.count())
         for key in query:
             # query contains the ENTIRE database split in parts by batchSize
