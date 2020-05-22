@@ -66,7 +66,7 @@ def setup() -> Tuple[Collection, Connection, str]:
     else:
         logging.error("Collection %s not found.", config["collection"])
 
-    return collection, db, config["collection"]
+    return collection, db
 
 
 def worker_setup(feature, dask_worker):
@@ -108,7 +108,7 @@ def generate_query(collection: str, db, Analyzer):
 
 class DocTransformer:
     def __init__(self, feature: str):
-        self.collection, self.db, self.collectionName = setup()
+        self.collection, self.db = setup()
         self.feature = feature
 
     def parallel_main(self, parallel: int):
