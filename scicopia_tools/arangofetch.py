@@ -11,7 +11,6 @@ from analyzers.AutoTagger import AutoTagger
 from analyzers.TextSplitter import TextSplitter
 
 from collections import deque
-from itertools import zip_longest
 import multiprocessing
 from dask.distributed import Client, LocalCluster, get_worker
 from streamz import Stream
@@ -20,12 +19,15 @@ features = {"auto_tag": AutoTagger, "split": TextSplitter}
 BATCHSIZE = 100
 
 
-def grouper(iterable, n: int):
-    # https://docs.python.org/3/library/itertools.html#recipes
-    "Collect data into fixed-length chunks or blocks"
-    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
-    args = [iter(iterable)] * n
-    return zip_longest(*args, fillvalue=None)
+def grouper(query, n: int):
+    data = deque(maxlen=n) 
+    while query.response['hasMore']:
+        data.append(query.__next__())
+        if len(data) == n:
+            yield data.copy()
+            data.clear()
+    if data:
+        yield data
 
 
 def log(level: str, message: str = ""):
@@ -106,7 +108,7 @@ def process_parallel(docs: Tuple[Dict[str, str]]):
 
 
 def generate_query(collection: str, db, Analyzer):
-    AQL = f"FOR x IN {collection} FILTER x.{Analyzer.field} == null RETURN x._key"
+    AQL = f"FOR x IN {collection} FILTER x.{Analyzer.field} == null RETURN {{ '_key': x._key, 'doc_section': x.{Analyzer.doc_section} }}"
     return db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
 
 
