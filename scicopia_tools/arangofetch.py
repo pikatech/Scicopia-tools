@@ -108,7 +108,7 @@ def process_parallel(docs: Tuple[Dict[str, str]]):
 
 
 def generate_query(collection: str, db, Analyzer):
-    AQL = f"FOR x IN {collection} FILTER x.{Analyzer.field} == null RETURN {{ '_key': x._key, 'doc_section': x.{Analyzer.doc_section} }}"
+    AQL = f"FOR x IN {collection} FILTER x.{Analyzer.field} == null and x.{Analyzer.doc_section} != null RETURN {{ '_key': x._key, 'doc_section': x.{Analyzer.doc_section} }}"
     return db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
 
 
