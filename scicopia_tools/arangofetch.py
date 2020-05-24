@@ -75,6 +75,10 @@ def worker_setup(feature, dask_worker):
     dask_worker.analyzer = features[feature]()
 
 
+def worker_teardown(dask_worker):
+    dask_worker.analyzer.release_resources()
+
+
 def process_parallel(docs: Tuple[Dict[str, str]]):
     worker = get_worker()
     updates = deque(maxlen=len(docs))
@@ -141,7 +145,11 @@ class DocTransformer:
         for docs in grouper(query, BATCHSIZE):
             source.emit(docs)
             progress.next(len(docs))
+            if not query.response['hasMore']:
+                break
         progress.finish()
+        client.run(worker_teardown)
+
 
     def main(self) -> None:
         Analyzer = features[self.feature]

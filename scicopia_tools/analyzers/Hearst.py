@@ -123,3 +123,6 @@ class Hearst:
                 except nx.NetworkXNoPath:
                     pass
         return {Hearst.field: hits}
+
+    def release_resources(self):
+        del self.nlp

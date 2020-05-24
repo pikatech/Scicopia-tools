@@ -62,3 +62,6 @@ class AutoTagger:
         extractor.candidate_weighting(alpha=1.1, threshold=0.74, method="average")
         keyphrases = extractor.get_n_best(n=10)
         return {AutoTagger.field: [key[0] for key in keyphrases]}
+
+    def release_resources(self):
+        del self.nlp

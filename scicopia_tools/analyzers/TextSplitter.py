@@ -47,3 +47,7 @@ class TextSplitter:
         """
         doc = self.nlp(text)
         return {TextSplitter.field: [(x.start_char, x.end_char) for x in doc.sents]}
+
+    def release_resources(self):
+        del self.nlp
+ 
