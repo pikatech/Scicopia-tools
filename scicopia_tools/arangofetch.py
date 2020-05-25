@@ -118,6 +118,9 @@ class DocTransformer:
         self.collection, self.db = setup()
         self.feature = feature
 
+    def teardown(self):
+        self.db.disconnectSession()
+
     def parallel_main(self, parallel: int):
         if parallel <= 0:
             print("The number of processes has to be greater than zero!")
@@ -165,6 +168,8 @@ class DocTransformer:
             self.process_doc(key)
             progress.next()
         progress.finish()
+        query.delete()
+
 
     def process_doc(self, key: str):
         doc = self.collection[key]
@@ -202,3 +207,4 @@ if __name__ == "__main__":
         transformer.main()
     else:
         transformer.parallel_main(ARGS.parallel)
+    transformer.teardown()
