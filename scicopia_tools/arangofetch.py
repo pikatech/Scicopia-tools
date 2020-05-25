@@ -153,6 +153,7 @@ class DocTransformer:
             if not query.response["hasMore"]:
                 break
         progress.finish()
+        query.delete()
 
     def main(self) -> None:
         Analyzer = features[self.feature]
