@@ -12,7 +12,7 @@ from analyzers.TextSplitter import TextSplitter
 
 from collections import deque
 import multiprocessing
-from dask.distributed import Client, LocalCluster, get_worker
+from dask.distributed import Client, LocalCluster, get_worker, WorkerPlugin
 from streamz import Stream
 
 features = {"auto_tag": AutoTagger, "split": TextSplitter}
@@ -20,8 +20,8 @@ BATCHSIZE = 100
 
 
 def grouper(query, n: int):
-    data = deque(maxlen=n) 
-    while query.response['hasMore']:
+    data = deque(maxlen=n)
+    while query.response["hasMore"]:
         data.append(query.__next__())
         if len(data) == n:
             yield data.copy()
@@ -77,8 +77,9 @@ def worker_setup(feature, dask_worker):
     dask_worker.analyzer = features[feature]()
 
 
-def worker_teardown(dask_worker):
-    dask_worker.analyzer.release_resources()
+class TeardownPlugin(WorkerPlugin):
+    def teardown(self, worker):
+        worker.analyzer.release_resources()
 
 
 def process_parallel(docs: Tuple[Dict[str, str]]):
@@ -129,7 +130,9 @@ class DocTransformer:
             )
             parallel = multiprocessing.cpu_count()
         cluster = LocalCluster(n_workers=parallel)
+        teardown = TeardownPlugin()
         client = Client(cluster)
+        client.register_worker_plugin(teardown)
         client.run(worker_setup, self.feature)
 
         source = Stream()
@@ -147,11 +150,9 @@ class DocTransformer:
         for docs in grouper(query, BATCHSIZE):
             source.emit(docs)
             progress.next(len(docs))
-            if not query.response['hasMore']:
+            if not query.response["hasMore"]:
                 break
         progress.finish()
-        client.run(worker_teardown)
-
 
     def main(self) -> None:
         Analyzer = features[self.feature]
