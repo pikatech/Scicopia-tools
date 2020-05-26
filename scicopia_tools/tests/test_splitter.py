@@ -28,4 +28,4 @@ def test_such_as():
 
     split = TextSplitter("en_core_web_sm")
     splits = split.process(doc["abstract"])
-    assert result == splits['abstract_offsets']
+    assert result == splits["abstract_offsets"]
