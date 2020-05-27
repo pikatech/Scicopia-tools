@@ -3,6 +3,7 @@ import logging
 from typing import Dict, Tuple
 from pyArango.collection import Collection
 from pyArango.connection import Connection
+from pyArango.database import Database
 from pyArango.theExceptions import UpdateError
 from progress.bar import Bar
 
@@ -21,13 +22,14 @@ BATCHSIZE = 100
 
 def grouper(query, n: int):
     data = deque(maxlen=n)
-    while query.response["hasMore"]:
+    for doc in query:
         data.append(query.__next__())
         if len(data) == n:
             yield data.copy()
             data.clear()
-    if data:
-        yield data
+    else:
+        if data:
+            yield data
 
 
 def log(level: str, message: str = ""):
@@ -45,21 +47,21 @@ def log(level: str, message: str = ""):
         logging.debug(message)
 
 
-def setup() -> Tuple[Collection, Connection]:
+def setup() -> Tuple[Collection, Connection, Database]:
     config = read_config()
     if "arango_url" in config:
-        arangoconn = Connection(
+        connection = Connection(
             arangoURL=config["arango_url"],
             username=config["username"],
             password=config["password"],
         )
     else:
-        arangoconn = Connection(
+        connection = Connection(
             username=config["username"], password=config["password"]
         )
 
-    if arangoconn.hasDatabase(config["database"]):
-        db = arangoconn[config["database"]]
+    if connection.hasDatabase(config["database"]):
+        db = connection[config["database"]]
     else:
         logging.error("Database %s not found.", config["database"])
 
@@ -68,11 +70,11 @@ def setup() -> Tuple[Collection, Connection]:
     else:
         logging.error("Collection %s not found.", config["collection"])
 
-    return collection, db
+    return collection, connection, db
 
 
 def worker_setup(feature, dask_worker):
-    dask_worker.collection, dask_worker.db = setup()
+    dask_worker.collection, dask_worker.connection, dask_worker.db = setup()
     dask_worker.feature = feature
     dask_worker.analyzer = features[feature]()
 
@@ -80,6 +82,7 @@ def worker_setup(feature, dask_worker):
 class TeardownPlugin(WorkerPlugin):
     def teardown(self, worker):
         worker.analyzer.release_resources()
+        worker.db.disconnectSession()
 
 
 def process_parallel(docs: Tuple[Dict[str, str]]):
@@ -115,11 +118,11 @@ def generate_query(collection: str, db, Analyzer):
 
 class DocTransformer:
     def __init__(self, feature: str):
-        self.collection, self.db = setup()
+        self.collection, self.connection, self.db = setup()
         self.feature = feature
 
     def teardown(self):
-        self.db.disconnectSession()
+        self.connection.disconnectSession()
 
     def parallel_main(self, parallel: int):
         if parallel <= 0:
@@ -132,14 +135,8 @@ class DocTransformer:
                 multiprocessing.cpu_count(),
             )
             parallel = multiprocessing.cpu_count()
-        cluster = LocalCluster(n_workers=parallel)
-        teardown = TeardownPlugin()
-        client = Client(cluster)
-        client.register_worker_plugin(teardown)
-        client.run(worker_setup, self.feature)
 
-        source = Stream()
-        source.scatter().map(process_parallel).buffer(parallel * 2).gather().sink(log)
+        # Leave early, if there is nothing to be done
         Analyzer = features[self.feature]
         query = generate_query(self.collection.name, self.db, Analyzer)
         unfinished = (
@@ -148,15 +145,24 @@ class DocTransformer:
         )
         if unfinished == 0:
             logging.info("Nothing to be done. Task %s completed.", self.feature)
+            query.delete()
             return
+        
+        cluster = LocalCluster(n_workers=parallel)
+        teardown = TeardownPlugin()
+        client = Client(cluster)
+        client.register_worker_plugin(teardown)
+        client.run(worker_setup, self.feature)
+
+        source = Stream()
+        source.scatter().map(process_parallel).buffer(parallel * 2).gather().sink(log)
         progress = Bar("entries", max=unfinished)
         for docs in grouper(query, BATCHSIZE):
             source.emit(docs)
             progress.next(len(docs))
-            if not query.response["hasMore"]:
-                break
+#            if not query.response["hasMore"]:
+#                break
         progress.finish()
-        query.delete()
 
     def main(self) -> None:
         Analyzer = features[self.feature]
