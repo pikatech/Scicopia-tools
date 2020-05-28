@@ -23,7 +23,7 @@ BATCHSIZE = 100
 def grouper(query, n: int):
     data = deque(maxlen=n)
     for doc in query:
-        data.append(query.__next__())
+        data.append(doc)
         if len(data) == n:
             yield data.copy()
             data.clear()
@@ -166,12 +166,18 @@ class DocTransformer:
     def main(self) -> None:
         Analyzer = features[self.feature]
         query = generate_query(self.collection.name, self.db, Analyzer)
+        unfinished = (
+            query.response["extra"]["stats"]["scannedFull"]
+            - query.response["extra"]["stats"]["filtered"]
+        )
+        if unfinished == 0:
+            logging.info("Nothing to be done. Task %s completed.", self.feature)
+            return
         self.analyzer = Analyzer()
-        progress = Bar("entries", max=self.collection.count())
+        progress = Bar(" entries", max=unfinished)
         for docs in grouper(query, BATCHSIZE):
-            # query contains the ENTIRE database split in parts by batchSize
             self.process_doc(docs)
-            progress.next()
+            progress.next(len(docs))
         progress.finish()
 
     def process_doc(self, docs: Tuple[Dict[str, str]]):
