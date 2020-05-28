@@ -169,28 +169,36 @@ class DocTransformer:
         query = generate_query(self.collection.name, self.db, Analyzer)
         self.analyzer = Analyzer()
         progress = Bar("entries", max=self.collection.count())
-        for key in query:
+        for docs in grouper(query, BATCHSIZE):
             # query contains the ENTIRE database split in parts by batchSize
-            self.process_doc(key)
+            self.process_doc(docs)
             progress.next()
         progress.finish()
-        query.delete()
+        # query.delete()
 
-
-    def process_doc(self, key: str):
-        doc = self.collection[key]
-        # for each database object add each entry of feature
-        data = doc[self.analyzer.doc_section]
-        if not data is None:
-            try:
-                data = self.analyzer.process(data)
-                for field in data:
-                    doc[field] = data[field]
-                doc.patch()
-            except Exception as e:
-                logging.error(
-                    "Exception occurred while processing document %s: %s", key, str(e)
-                )
+    def process_doc(self, docs: Tuple[Dict[str, str]]):
+        updates = deque(maxlen=len(docs))
+        for doc in docs:
+            if doc is None:
+                continue
+            data = doc["doc_section"]
+            if not data is None:
+                try:
+                    data = self.analyzer.process(data)
+                    data["_key"] = doc["_key"]
+                    updates.append(data)
+                except Exception as e:
+                    error = f"Exception occurred while processing document {doc['_key']}: {str(e)}"
+                    logging.error(error)
+                    return ("error", error)
+            else:
+                print(f"Document {doc['_key']} has None for {self.feature}")
+        try:
+            self.collection.bulkSave(updates, details=True, onDuplicate="update")
+        except UpdateError as e:
+            return ("error", e.message)
+        finally:
+            updates.clear()
 
 
 if __name__ == "__main__":
@@ -213,4 +221,4 @@ if __name__ == "__main__":
         transformer.main()
     else:
         transformer.parallel_main(ARGS.parallel)
-    transformer.teardown()
+    #transformer.teardown()
