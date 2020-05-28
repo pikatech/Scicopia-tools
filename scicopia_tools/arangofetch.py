@@ -145,7 +145,6 @@ class DocTransformer:
         )
         if unfinished == 0:
             logging.info("Nothing to be done. Task %s completed.", self.feature)
-            query.delete()
             return
         
         cluster = LocalCluster(n_workers=parallel)
@@ -174,7 +173,6 @@ class DocTransformer:
             self.process_doc(docs)
             progress.next()
         progress.finish()
-        # query.delete()
 
     def process_doc(self, docs: Tuple[Dict[str, str]]):
         updates = deque(maxlen=len(docs))
