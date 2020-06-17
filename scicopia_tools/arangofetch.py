@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 import logging
 from typing import Dict, Tuple
 from pyArango.collection import Collection
@@ -95,6 +96,7 @@ def process_parallel(docs: Tuple[Dict[str, str]]):
         if not data is None:
             try:
                 data = worker.analyzer.process(data)
+                data["modified_at"] = round(datetime.now().timestamp())
                 data["_key"] = doc["_key"]
                 updates.append(data)
             except Exception as e:
@@ -189,6 +191,7 @@ class DocTransformer:
             if not data is None:
                 try:
                     data = self.analyzer.process(data)
+                    data["modified_at"] = round(datetime.now().timestamp())
                     data["_key"] = doc["_key"]
                     updates.append(data)
                 except Exception as e:
