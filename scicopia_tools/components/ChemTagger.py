@@ -12,6 +12,7 @@ from typing import List
 
 from ahocorasick import Automaton
 from spacy.tokens import Span
+from spacy.parts_of_speech import NOUN
 
 Annotation = namedtuple("Annotation", ["name", "label", "start", "end"])
 
@@ -29,7 +30,7 @@ might_be_nouns = [
 ]
 
 
-class DictTagger:
+class ChemTagger:
 
     name = "dictionary_tagger"
 
@@ -52,7 +53,7 @@ class DictTagger:
         if finalize:
             automaton.make_automaton()
         self.automaton = automaton
-        self.EntityKey = cmp_to_key(DictTagger.entity_sort)
+        self.EntityKey = cmp_to_key(ChemTagger.entity_sort)
 
     def __call__(self, doc):
         """
@@ -83,7 +84,7 @@ class DictTagger:
                 continue
             annotations.append(Annotation(word, "chemical", start + 1, end))
         annotations.sort(key=self.EntityKey)
-        annotations = DictTagger.remove_overlap(annotations)
+        annotations = ChemTagger.remove_overlap(annotations)
         return self.retokenize(doc, annotations)
 
     def retokenize(self, doc, annotations):
@@ -94,6 +95,8 @@ class DictTagger:
             if annotation.start in start and annotation.end in end:
                 s = start.index(annotation.start)
                 e = end.index(annotation.end)
+                if s == e and annotation.name in might_be_nouns and doc[s].pos != NOUN:
+                    continue
                 spans.append(Span(doc, s, e + 1, label="CHEMICAL"))
         if spans:
             doc.ents += tuple(spans)

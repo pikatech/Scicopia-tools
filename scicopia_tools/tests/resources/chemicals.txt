@@ -1,0 +1,100 @@
+water
+lead
+ethanol
+iron
+acetate
+zinc
+phosphate
+chloride
+amino
+acetic acid
+copper
+ethylene
+methanol
+calcium
+oxygen
+sulfate
+ammonia
+gold
+aluminum
+glycerol
+sodium
+urea
+carbon
+cadmium
+pyridine
+pyrene
+benzene
+silver
+hydrogen peroxide
+potassium
+hexane
+fluoride
+nicotine
+silicon
+acetonitrile
+methyl
+platinum
+phenol
+creatinine
+hydrogen
+cobalt
+lithium
+nitrogen
+naphthalene
+uranium
+acetone
+methane
+proline
+ammonium
+mercury
+uric acid
+titanium
+nitrate
+caffeine
+nitric oxide
+oxalate
+magnesium
+bromide
+proton
+nicotinamide
+ethyl acetate
+coumarin
+nickel
+ethane
+warfarin
+methacrylate
+lactate
+toluene
+xanthine
+vanadium
+propionate
+indole
+formaldehyde
+chromium
+quinoline
+pyrimidine
+anthracene
+manganese
+glutaraldehyde
+tungsten
+propionic acid
+guanine
+palmitic acid
+pyruvate
+butyrate
+iodide
+phenanthrene
+succinate
+ruthenium
+imidazole
+acetaldehyde
+lactic acid
+carbonate
+nitrite
+acrylamide
+butyric acid
+hydroxy
+palladium
+5-fluorouracil
+acetylene
