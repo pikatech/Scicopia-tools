@@ -23,13 +23,15 @@ def pipeline():
 
 
 def test_overlap(pipeline):
+    # Taken from: https://en.wikipedia.org/wiki/Hydrogen_peroxide
     doc = pipeline(
         "Enzymes that use or decompose hydrogen peroxide are classified as peroxidases."
     )
     assert len(doc.ents) == 1
 
 def test_compounds(pipeline):
-    doc = pipeline("Ethyl acetate is the ester of ethanol and acetic acid")
+    # Taken from: https://en.wikipedia.org/wiki/Ethyl_acetate
+    doc = pipeline("Ethyl acetate is the ester of ethanol and acetic acid.")
     assert len(doc.ents) == 3
 
 def test_pos_tags(pipeline):
