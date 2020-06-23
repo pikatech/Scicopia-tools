@@ -34,7 +34,7 @@ class ChemTagger:
 
     name = "dictionary_tagger"
 
-    def __init__(self, wordlist, label, finalize: bool = True):
+    def __init__(self, wordlist, label="CHEMICAL", finalize: bool = True):
         """
         Creates an Aho-Corasick automaton out of a text file.
         
@@ -53,6 +53,7 @@ class ChemTagger:
         if finalize:
             automaton.make_automaton()
         self.automaton = automaton
+        self.label = label
         self.EntityKey = cmp_to_key(ChemTagger.entity_sort)
 
     def __call__(self, doc):
@@ -82,7 +83,7 @@ class ChemTagger:
             start = end - len(word) - 1
             if start >= 0 and text[start].isalnum():
                 continue
-            annotations.append(Annotation(word, "chemical", start + 1, end))
+            annotations.append(Annotation(word, self.label, start + 1, end))
         annotations.sort(key=self.EntityKey)
         annotations = ChemTagger.remove_overlap(annotations)
         return self.retokenize(doc, annotations)
@@ -97,7 +98,7 @@ class ChemTagger:
                 e = end.index(annotation.end)
                 if s == e and annotation.name in might_be_nouns and doc[s].pos != NOUN:
                     continue
-                spans.append(Span(doc, s, e + 1, label="CHEMICAL"))
+                spans.append(Span(doc, s, e + 1, label=self.label))
         if spans:
             doc.ents += tuple(spans)
             with doc.retokenize() as retok:
