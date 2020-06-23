@@ -19,7 +19,7 @@ import networkx as nx
 class Hearst:
     field = "hearst"
     doc_section = "abstract"
-    
+
     def __init__(self, model: str = "en_core_web_lg"):
         """
         Loads a spaCy model.
@@ -118,8 +118,14 @@ class Hearst:
                         and doc[path[1]].text == "as"
                         and doc[path[1] - 1].text == "such"
                     ):
+                        span1 = source[0]
+                        if doc[span1.start].pos_ == "DET":
+                            span1 = Span(doc, span1.start + 1, span1.end)
                         for t in target:
-                            hits.append((source[0].lemma_, "such as", t.lemma_))
+                            span2 = t
+                            if doc[span2.start].pos_ == "DET":
+                                span2 = Span(doc, span2.start + 1, span2.end)
+                            hits.append((span1.lemma_, "such as", span2.lemma_))
                 except nx.NetworkXNoPath:
                     pass
         return {Hearst.field: hits}

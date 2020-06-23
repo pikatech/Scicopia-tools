@@ -11,7 +11,8 @@ from analyzers.Hearst import Hearst
 
 def test_such_as():
     hearst = Hearst("en_core_web_sm")
-    text = "Patients of all ages can develop nail disorders, such as onychocryptosis, which are recurrent and painful conditions."
+    # Taken from: https://en.wikipedia.org/wiki/Ethyl_acetate
+    text = "In the laboratory, and usually for illustrative purposes only, ethyl esters are typically hydrolyzed in a two-step process starting with a stoichiometric amount of a strong base, such as sodium hydroxide."
     relations = hearst.process(text)[Hearst.field]
     assert len(relations) == 1
-    assert " ".join(relations[0]) == "nail disorder such as onychocryptosis"
+    assert " ".join(relations[0]) == "strong base such as sodium hydroxide"
