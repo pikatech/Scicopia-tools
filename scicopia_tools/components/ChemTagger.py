@@ -11,6 +11,7 @@ from functools import cmp_to_key
 from typing import List
 
 from ahocorasick import Automaton
+from intervaltree import IntervalTree
 from spacy.tokens import Span
 from spacy.parts_of_speech import NOUN
 
@@ -42,14 +43,13 @@ class ChemTagger:
         
         """
         automaton = Automaton()
-        line = wordlist.readline()
-        while line:
+        for line in wordlist:
             line = line.rstrip()
-            automaton.add_word(line, line)
-            # Uppercase at the start of a sentence
-            sent_start = f"{line[0].title()}{line[1:]}"
-            automaton.add_word(sent_start, sent_start)
-            line = wordlist.readline()
+            if line:
+                automaton.add_word(line, line)
+                # Uppercase at the start of a sentence
+                sent_start = f"{line[0].title()}{line[1:]}"
+                automaton.add_word(sent_start, sent_start)
         if finalize:
             automaton.make_automaton()
         self.automaton = automaton
@@ -100,7 +100,17 @@ class ChemTagger:
                     continue
                 spans.append(Span(doc, s, e + 1, label=self.label))
         if spans:
-            doc.ents += tuple(spans)
+            if doc.ents:
+                tree = IntervalTree()
+                for ent in doc.ents:
+                    tree[ent.start:ent.end] = ent
+                for span in spans:
+                    tree.remove_overlap(span.start, span.end)
+                    tree.addi(span.start, span.end, span)
+                spans = tuple(span for (_, _, span,) in tree)
+                doc.ents = spans
+            else:
+                doc.ents += tuple(spans)
             with doc.retokenize() as retok:
                 for span in spans:
                     if span.end - span.start > 1:

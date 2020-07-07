@@ -12,6 +12,7 @@ from typing import List
 import logging
 
 from ahocorasick import Automaton
+from intervaltree import IntervalTree
 from spacy.tokens import Span
 
 Annotation = namedtuple("Annotation", ["name", "label", "start", "end"])
@@ -130,7 +131,7 @@ class TaxonTagger:
         for i, anno in enumerate(annotations):
             if len(anno.label) == 1:
                 uniques.update(anno.label)
-        for anno in annotations:
+        for i, anno in enumerate(annotations):
             if len(anno.label) == 1:
                 continue
             candidates = uniques.intersection(anno.label)
@@ -152,7 +153,17 @@ class TaxonTagger:
                 span._.set("id_candidates", annotation.label)
                 spans.append(span)
         if spans:
-            doc.ents += tuple(spans)
+            if doc.ents:
+                tree = IntervalTree()
+                for ent in doc.ents:
+                    tree[ent.start:ent.end] = ent
+                for span in spans:
+                    tree.remove_overlap(span.start, span.end)
+                    tree.addi(span.start, span.end, span)
+                spans = tuple(span for (_, _, span,) in tree)
+                doc.ents = spans
+            else:
+                doc.ents += tuple(spans)
             with doc.retokenize() as retok:
                 for span in spans:
                     if span.end - span.start > 1:
