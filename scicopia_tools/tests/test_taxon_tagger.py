@@ -6,7 +6,7 @@ Created on Mon Jun 22 15:08:07 2020
 @author: tech
 """
 
-from components.TaxonTagger import TaxonTagger
+from scicopia_tools.components.TaxonTagger import TaxonTagger
 
 import pytest
 
@@ -16,7 +16,7 @@ def pipeline():
     import spacy
 
     nlp = spacy.load("en_core_web_sm", disable=["ner"])
-    dict_path = "tests/resources/taxa.tsv"
+    dict_path = "scicopia_tools/tests/resources/taxa.tsv"
     with open(dict_path, "rt") as taxa:
         taxontagger = TaxonTagger(taxa)
     nlp.add_pipe(taxontagger, after="tagger")

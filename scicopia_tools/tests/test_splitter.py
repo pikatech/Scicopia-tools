@@ -7,7 +7,7 @@ Created on Tue May 19 12:42:07 2020
 """
 
 import json
-from analyzers.TextSplitter import TextSplitter
+from scicopia_tools.analyzers.TextSplitter import TextSplitter
 
 
 def test_such_as():
@@ -23,7 +23,7 @@ def test_such_as():
         (367, 414),
         (415, 468),
     ]
-    with open("tests/data/arxiv.json") as input:
+    with open("scicopia_tools/tests/data/arxiv.json") as input:
         doc = json.load(input)
 
     split = TextSplitter("en_core_web_sm")

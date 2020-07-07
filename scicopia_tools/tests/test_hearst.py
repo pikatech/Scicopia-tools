@@ -6,7 +6,7 @@ Created on Fri Mar  6 15:23:40 2020
 @author: kampe
 """
 
-from analyzers.Hearst import Hearst
+from scicopia_tools.analyzers.Hearst import Hearst
 
 
 def test_such_as():

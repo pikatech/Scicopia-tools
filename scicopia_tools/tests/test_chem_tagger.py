@@ -6,7 +6,7 @@ Created on Fri Mar  6 15:23:40 2020
 @author: kampe
 """
 
-from components.ChemTagger import ChemTagger
+from scicopia_tools.components.ChemTagger import ChemTagger
 
 import pytest
 
@@ -15,7 +15,7 @@ def pipeline():
     import spacy
 
     nlp = spacy.load("en_core_web_sm")
-    dict_path = "tests/resources/chemicals.txt"
+    dict_path = "scicopia_tools/tests/resources/chemicals.txt"
     with open(dict_path, "rt") as chemicals:
         chemtagger = ChemTagger(chemicals, "chemicals")
     nlp.add_pipe(chemtagger, after='tagger')

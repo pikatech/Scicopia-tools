@@ -6,7 +6,7 @@ Created on Tue May 26 17:50:25 2020
 @author: tech
 """
 
-from analyzers.LangDetect import LangDetect
+from scicopia_tools.analyzers.LangDetect import LangDetect
 
 
 def test_german():
