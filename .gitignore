@@ -27,6 +27,8 @@ coverage.xml
 
 *.log
 temp/
+*.egg-info/
+
 
 # Flask stuff:
 instance/
