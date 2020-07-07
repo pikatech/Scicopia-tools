@@ -26,6 +26,7 @@ coverage.xml
 *.pot
 
 *.log
+temp/
 
 # Flask stuff:
 instance/
