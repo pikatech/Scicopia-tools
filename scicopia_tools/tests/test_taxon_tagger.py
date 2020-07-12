@@ -23,6 +23,12 @@ def pipeline():
     return nlp
 
 
+def test_overlap(pipeline):
+   doc = pipeline("The Burkholderia pseudomallei group contains overlapping mentions.")
+   assert len(doc.ents) == 1
+   assert doc.ents[0].text == "Burkholderia pseudomallei"
+
+
 def test_ambiguous(pipeline):
     # Taken from: https://en.wikipedia.org/wiki/Caenorhabditis_elegans
     doc = pipeline(

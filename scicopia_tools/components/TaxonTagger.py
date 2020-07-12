@@ -8,8 +8,9 @@ Created on Fri Jun 19 11:21:10 2020
 
 from collections import namedtuple
 from functools import cmp_to_key
-from typing import List
 import logging
+import re # Only used in exception handling
+from typing import List
 
 from ahocorasick import Automaton
 from intervaltree import IntervalTree
@@ -54,6 +55,7 @@ NEGATIVE_TAX = set(
 
 class TaxonTagger:
 
+    label = "TAXON"
     name = "taxon_tagger"
 
     def __init__(self, wordlist, finalize: bool = True):
@@ -163,7 +165,32 @@ class TaxonTagger:
                 spans = tuple(span for (_, _, span,) in tree)
                 doc.ents = spans
             else:
-                doc.ents += tuple(spans)
+                try:
+                    doc.ents += tuple(spans)
+                except ValueError as e:
+                    if e.args[0].startswith('[E103]'):
+                        # Trying to set conflicting doc.ents
+                        # Should have been resolved by remove_overlap (ents from same tagger)
+                        # and the use of an interval tree (ents from different tagger)
+                        span_re = re.compile(f"'\\((\\d+),\\s(\\d+),\\s'{TaxonTagger.label}'\\)'")
+                        message = e.args[0]
+                        m = span_re.search(message)
+                        if not m is None:
+                            start1 = int(m.group(1))
+                            end1 = int(m.group(2))
+                            m = span_re.search(message, m.end()+1)
+                            if not m is None:
+                                start2 = int(m.group(1))
+                                end2 = int(m.group(2))
+                                logging.error(e)
+                                logging.error("First span: %s, second span: %s", doc[start1:end1].text, doc[start2:end2].text)
+                            else:
+                                logging.error(e)
+                        else:
+                            logging.error(e)
+                    else:
+                        logging.error(e)
+                    return doc
             with doc.retokenize() as retok:
                 for span in spans:
                     if span.end - span.start > 1:
@@ -215,8 +242,12 @@ class TaxonTagger:
         filtered = []
         start = -1
         end = -1
+        # util.filter_spans got introduced in spaCy 2.1.4 (May 12, 2019)
+        # https://spacy.io/api/top-level#util.filter_spans
+        # We keep this function since it is older and tested.
         for entity in entities:
-            if entity.start >= start and entity.end <= end:
+            # The first entity will never satisfy these conditions
+            if entity.start >= start and entity.start <= end:
                 continue
 
             filtered.append(entity)

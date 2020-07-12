@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="scicopia-tools",
-    version="0.5.1",
+    version="0.5.2",
     author="Pikatech",
     author_email="pikatech@mail.de",
     description="Document analysis modules for Scicopia.",
@@ -17,6 +17,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Development Status :: 3 - Alpha",

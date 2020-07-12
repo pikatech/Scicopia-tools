@@ -27,7 +27,9 @@ def test_overlap(pipeline):
     doc = pipeline(
         "Enzymes that use or decompose hydrogen peroxide are classified as peroxidases."
     )
+    print(pipeline.pipeline)
     assert len(doc.ents) == 1
+    assert doc.ents[0].text == "hydrogen peroxide"
 
 def test_compounds(pipeline):
     # Taken from: https://en.wikipedia.org/wiki/Ethyl_acetate
