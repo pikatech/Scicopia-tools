@@ -11,13 +11,14 @@ from progress.bar import Bar
 from config import read_config
 from analyzers.AutoTagger import AutoTagger
 from analyzers.TextSplitter import TextSplitter
+from analyzers.LatexCleaner import LatexCleaner
 
 from collections import deque
 import multiprocessing
 from dask.distributed import Client, LocalCluster, get_worker, WorkerPlugin
 from streamz import Stream
 
-features = {"auto_tag": AutoTagger, "split": TextSplitter}
+features = {"auto_tag": AutoTagger, "split": TextSplitter, "clean": LatexCleaner}
 BATCHSIZE = 100
 
 
@@ -93,7 +94,7 @@ def process_parallel(docs: Tuple[Dict[str, str]]):
         if doc is None:
             continue
         data = doc["doc_section"]
-        if not data is None:
+        if data:
             try:
                 data = worker.analyzer.process(data)
                 data["modified_at"] = round(datetime.now().timestamp())
@@ -113,9 +114,14 @@ def process_parallel(docs: Tuple[Dict[str, str]]):
         updates.clear()
 
 
-def generate_query(collection: str, db, Analyzer):
-    AQL = f"FOR x IN {collection} FILTER x.{Analyzer.field} == null and x.{Analyzer.doc_section} != null RETURN {{ '_key': x._key, 'doc_section': x.{Analyzer.doc_section} }}"
-    return db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
+def generate_query(collection: str, db, Analyzer): # change to work with multiple doc_sections
+    if type(Analyzer.doc_section) == list: 
+        AQL = f"FOR x IN {collection} FILTER x.{Analyzer.field} == null AND {Analyzer.doc_section} ANY IN ATTRIBUTES(x) RETURN {{ '_key': x._key, 'doc_section': x }}"
+        return db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
+    else:
+    
+        AQL = f"FOR x IN {collection} FILTER x.{Analyzer.field} == null and x.{Analyzer.doc_section} != null RETURN {{ '_key': x._key, 'doc_section': x.{Analyzer.doc_section} }}"
+        return db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
 
 
 class DocTransformer:
@@ -188,7 +194,7 @@ class DocTransformer:
             if doc is None:
                 continue
             data = doc["doc_section"]
-            if not data is None:
+            if data:
                 try:
                     data = self.analyzer.process(data)
                     data["modified_at"] = round(datetime.now().timestamp())
@@ -213,7 +219,7 @@ if __name__ == "__main__":
         description="Use feature to update Arango database"
     )
     PARSER.add_argument(
-        "feature", choices=["auto_tag", "split"], help="Feature to use."
+        "feature", choices=["auto_tag", "split", "clean"], help="Feature to use."
     )
     PARSER.add_argument(
         "-p",
