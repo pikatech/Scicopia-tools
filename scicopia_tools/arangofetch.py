@@ -8,10 +8,10 @@ from pyArango.database import Database
 from pyArango.theExceptions import UpdateError
 from progress.bar import Bar
 
-from config import read_config
-from analyzers.AutoTagger import AutoTagger
-from analyzers.TextSplitter import TextSplitter
-from analyzers.LatexCleaner import LatexCleaner
+from scicopia_tools.analyzers.AutoTagger import AutoTagger
+from scicopia_tools.analyzers.TextSplitter import TextSplitter
+from scicopia_tools.analyzers.LatexCleaner import LatexCleaner
+from scicopia_tools.config import read_config
 
 from collections import deque
 import multiprocessing
