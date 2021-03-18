@@ -1,22 +1,22 @@
 import argparse
-from datetime import datetime
 import logging
+import multiprocessing
+from collections import deque
+from datetime import datetime
 from typing import Dict, Tuple
+
+from dask.distributed import Client, LocalCluster, WorkerPlugin, get_worker
+from progress.bar import Bar
 from pyArango.collection import Collection
 from pyArango.connection import Connection
 from pyArango.database import Database
 from pyArango.theExceptions import UpdateError
-from progress.bar import Bar
+from streamz import Stream
 
 from scicopia_tools.analyzers.AutoTagger import AutoTagger
-from scicopia_tools.analyzers.TextSplitter import TextSplitter
 from scicopia_tools.analyzers.LatexCleaner import LatexCleaner
+from scicopia_tools.analyzers.TextSplitter import TextSplitter
 from scicopia_tools.config import read_config
-
-from collections import deque
-import multiprocessing
-from dask.distributed import Client, LocalCluster, get_worker, WorkerPlugin
-from streamz import Stream
 
 features = {"auto_tag": AutoTagger, "split": TextSplitter, "clean": LatexCleaner}
 BATCHSIZE = 100

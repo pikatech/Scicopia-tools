@@ -7,6 +7,7 @@ Created on Tue Feb 11 13:44:30 2020
 """
 import logging
 
+
 class LatexCleaner:
     field = "Clean"
     doc_section = ["abstract", "title", "author", "fulltext"]

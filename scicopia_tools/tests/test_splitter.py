@@ -7,6 +7,7 @@ Created on Tue May 19 12:42:07 2020
 """
 
 import json
+
 from scicopia_tools.analyzers.TextSplitter import TextSplitter
 
 

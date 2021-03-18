@@ -6,9 +6,9 @@ Created on Mon Jun 22 15:08:07 2020
 @author: tech
 """
 
-from scicopia_tools.components.TaxonTagger import TaxonTagger
-
 import pytest
+
+from scicopia_tools.components.TaxonTagger import TaxonTagger
 
 
 @pytest.fixture

@@ -6,10 +6,10 @@ Created on Fri Jun 19 11:21:10 2020
 @author: tech
 """
 
+import logging
+import re  # Only used in exception handling
 from collections import namedtuple
 from functools import cmp_to_key
-import logging
-import re # Only used in exception handling
 from typing import List
 
 from ahocorasick import Automaton

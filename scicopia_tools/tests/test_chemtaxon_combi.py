@@ -6,10 +6,10 @@ Created on Fri Jun 26 14:57:45 2020
 @author: tech
 """
 
+import pytest
+
 from scicopia_tools.components.ChemTagger import ChemTagger
 from scicopia_tools.components.TaxonTagger import TaxonTagger
-
-import pytest
 
 
 @pytest.fixture

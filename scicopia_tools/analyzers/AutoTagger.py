@@ -5,9 +5,10 @@ Created on Tue Feb 11 13:44:30 2020
 
 @author: tech
 """
-import spacy
-import pke
 import string
+
+import pke
+import spacy
 from nltk.corpus import stopwords
 
 

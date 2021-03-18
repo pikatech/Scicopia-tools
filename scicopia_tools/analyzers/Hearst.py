@@ -6,14 +6,14 @@ Created on Wed Jan 15 13:55:23 2020
 @author: kampe
 """
 
-from functools import cmp_to_key
 import itertools
 import logging
+from functools import cmp_to_key
 from typing import List, Tuple
 
+import networkx as nx
 import spacy
 from spacy.tokens.span import Span
-import networkx as nx
 
 
 class Hearst:

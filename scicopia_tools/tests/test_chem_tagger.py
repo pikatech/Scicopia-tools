@@ -6,9 +6,10 @@ Created on Fri Mar  6 15:23:40 2020
 @author: kampe
 """
 
+import pytest
+
 from scicopia_tools.components.ChemTagger import ChemTagger
 
-import pytest
 
 @pytest.fixture
 def pipeline():
