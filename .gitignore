@@ -29,6 +29,11 @@ coverage.xml
 temp/
 *.egg-info/
 
+# KDE (Dolphin)
+.directory
+
+# Microsoft Visual Studio Code
+.vscode
 
 # Flask stuff:
 instance/
