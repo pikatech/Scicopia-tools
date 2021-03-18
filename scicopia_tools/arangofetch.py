@@ -85,12 +85,12 @@ def process_parallel(docs: Tuple[Dict[str, str]]):
         updates.clear()
 
 
-def generate_query(collection: str, db, Analyzer): # change to work with multiple doc_sections
-    if type(Analyzer.doc_section) == list: 
+def generate_query(collection: str, db, Analyzer):
+    # TODO: change to work with multiple doc_sections
+    if type(Analyzer.doc_section) == list:
         AQL = f"FOR x IN {collection} FILTER x.{Analyzer.field} == null AND {Analyzer.doc_section} ANY IN ATTRIBUTES(x) RETURN {{ '_key': x._key, 'doc_section': x }}"
         return db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
     else:
-    
         AQL = f"FOR x IN {collection} FILTER x.{Analyzer.field} == null and x.{Analyzer.doc_section} != null RETURN {{ '_key': x._key, 'doc_section': x.{Analyzer.doc_section} }}"
         return db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
 
@@ -125,7 +125,7 @@ class DocTransformer:
         if unfinished == 0:
             logging.info("Nothing to be done. Task %s completed.", self.feature)
             return
-        
+
         cluster = LocalCluster(n_workers=parallel)
         teardown = TeardownPlugin()
         client = Client(cluster)
@@ -205,4 +205,4 @@ if __name__ == "__main__":
         transformer.main()
     else:
         transformer.parallel_main(ARGS.parallel)
-    #transformer.teardown()
+    # transformer.teardown()
