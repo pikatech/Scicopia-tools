@@ -7,16 +7,13 @@ from typing import Dict, Tuple
 
 from dask.distributed import Client, LocalCluster, WorkerPlugin, get_worker
 from progress.bar import Bar
-from pyArango.collection import Collection
-from pyArango.connection import Connection
-from pyArango.database import Database
 from pyArango.theExceptions import UpdateError
 from streamz import Stream
 
 from scicopia_tools.analyzers.AutoTagger import AutoTagger
 from scicopia_tools.analyzers.LatexCleaner import LatexCleaner
 from scicopia_tools.analyzers.TextSplitter import TextSplitter
-from scicopia_tools.config import read_config
+from scicopia_tools.db.arango import setup
 
 features = {"auto_tag": AutoTagger, "split": TextSplitter, "clean": LatexCleaner}
 BATCHSIZE = 100
@@ -47,32 +44,6 @@ def log(level: str, message: str = ""):
         logging.info(message)
     elif level == "debug":
         logging.debug(message)
-
-
-def setup() -> Tuple[Collection, Connection, Database]:
-    config = read_config()
-    if "arango_url" in config:
-        connection = Connection(
-            arangoURL=config["arango_url"],
-            username=config["username"],
-            password=config["password"],
-        )
-    else:
-        connection = Connection(
-            username=config["username"], password=config["password"]
-        )
-
-    if connection.hasDatabase(config["database"]):
-        db = connection[config["database"]]
-    else:
-        logging.error("Database %s not found.", config["database"])
-
-    if db.hasCollection(config["collection"]):
-        collection = db[config["collection"]]
-    else:
-        logging.error("Collection %s not found.", config["collection"])
-
-    return collection, connection, db
 
 
 def worker_setup(feature, dask_worker):
