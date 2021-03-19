@@ -19,7 +19,7 @@ features = {"auto_tag": AutoTagger, "split": TextSplitter, "clean": LatexCleaner
 BATCHSIZE = 100
 
 
-def grouper(query, n: int):
+def split_batch(query, n: int):
     data = deque(maxlen=n)
     for doc in query:
         data.append(doc)
@@ -135,7 +135,7 @@ class DocTransformer:
         source = Stream()
         source.scatter().map(process_parallel).buffer(parallel * 2).gather().sink(log)
         progress = Bar("entries", max=unfinished)
-        for docs in grouper(query, BATCHSIZE):
+        for docs in split_batch(query, BATCHSIZE):
             source.emit(docs)
             progress.next(len(docs))
 #            if not query.response["hasMore"]:
@@ -154,7 +154,7 @@ class DocTransformer:
             return
         self.analyzer = Analyzer()
         progress = Bar(" entries", max=unfinished)
-        for docs in grouper(query, BATCHSIZE):
+        for docs in split_batch(query, BATCHSIZE):
             self.process_doc(docs)
             progress.next(len(docs))
         progress.finish()
