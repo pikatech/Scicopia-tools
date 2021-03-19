@@ -87,7 +87,7 @@ def process_parallel(docs: Tuple[Dict[str, str]]):
 
 def generate_query(collection: str, db, Analyzer):
     # TODO: change to work with multiple doc_sections
-    if type(Analyzer.doc_section) == list:
+    if isinstance(Analyzer.doc_section, list):
         AQL = f"FOR x IN {collection} FILTER x.{Analyzer.field} == null AND {Analyzer.doc_section} ANY IN ATTRIBUTES(x) RETURN {{ '_key': x._key, 'doc_section': x }}"
         return db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
     else:
