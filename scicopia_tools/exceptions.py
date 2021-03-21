@@ -11,3 +11,6 @@ class ScicopiaException(Exception):
 
 class DBError(ScicopiaException):
     """Exceptions related to ArangoDB."""
+
+class ConfigError(ScicopiaException):
+    """Exceptions related to ArangoDB."""
