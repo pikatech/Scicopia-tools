@@ -14,12 +14,12 @@ from pyArango.connection import Connection
 from pyArango.database import Database
 
 from scicopia_tools.config import read_config
-from scicopia_tools.exceptions import DBError
+from scicopia_tools.exceptions import ConfigError, DBError
 
-DbAccess = namedtuple("DbAccess", ["collection, connection", "db"])
+DbAccess = namedtuple("DbAccess", ["collection", "connection", "database"])
 
 
-def setup() -> NamedTuple[Collection, Connection, Database]:
+def setup() -> DbAccess:
     """
     Connect to the Arango database.
 
@@ -47,15 +47,19 @@ def setup() -> NamedTuple[Collection, Connection, Database]:
             username=config["username"], password=config["password"]
         )
 
+    if not "database" in config:
+        raise ConfigError("Setting missing in config file: 'database'")
     if connection.hasDatabase(config["database"]):
         db = connection[config["database"]]
     else:
         logging.error("Database %s not found.", config["database"])
         raise DBError(f"Database {config['database']} not found.")
 
+    if not "documentcollection" in config:
+        raise ConfigError("Setting missing in config file: 'documentcollection'")
     if db.hasCollection(config["documentcollection"]):
         collection = db[config["documentcollection"]]
     else:
         logging.error("Collection %s not found.", config["documentcollection"])
         raise DBError(f"Collection {config['documentcollection']} not found.")
-    return DbAccess[collection, connection, db]
+    return DbAccess(collection, connection, db)
