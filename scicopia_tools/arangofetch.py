@@ -7,6 +7,7 @@ from typing import Dict, Tuple
 
 from dask.distributed import Client, LocalCluster, WorkerPlugin, get_worker
 from progress.bar import Bar
+from pyArango.database import Database
 from pyArango.theExceptions import UpdateError
 from streamz import Stream
 
@@ -85,7 +86,7 @@ def process_parallel(docs: Tuple[Dict[str, str]]):
         updates.clear()
 
 
-def generate_query(collection: str, db, Analyzer):
+def generate_query(collection: str, db: Database, Analyzer):
     # TODO: change to work with multiple doc_sections
     if isinstance(Analyzer.doc_section, list):
         AQL = f"FOR x IN {collection} FILTER x.{Analyzer.field} == null AND {Analyzer.doc_section} ANY IN ATTRIBUTES(x) RETURN {{ '_key': x._key, 'doc_section': x }}"
