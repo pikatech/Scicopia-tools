@@ -23,7 +23,7 @@ def clean_ngrams(ngrams: Counter) -> Counter:
     """
     Remove all n-grams that contain punctuation that is not a
     period mark - (',', ':', ';', '?', '!').
-    This also applies to newline characters (\n).
+    This also applies to newline characters (\\n).
 
     Examples:
         "code, as well"
