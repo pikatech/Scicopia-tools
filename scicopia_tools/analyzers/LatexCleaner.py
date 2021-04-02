@@ -215,7 +215,7 @@ class LatexCleaner:
         for sec in LatexCleaner.doc_section:
             try:
                 doc = data[sec]
-                if type(doc) == list:
+                if isinstance(doc, list):
                     result = []
                     for entry in doc:
                         result.append(self.clean(entry))
