@@ -1,8 +1,8 @@
-git+https://github.com/boudinfl/pke.git@6abbcd5d29d14f5151b79a20715ae06dbdd5e4b5
+git+https://github.com/boudinfl/pke.git@aa7df17214252b6bab2f1988eba89fdce8050818
 nltk
-spacy==2.3.2
-https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.3.1/en_core_web_sm-2.3.1.tar.gz#egg=en_core_web_sm
-https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-2.3.1/en_core_web_lg-2.3.1.tar.gz#egg=en_core_web_lg
+spacy==3.0.5
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.0.0/en_core_web_sm-3.0.0.tar.gz#egg=en_core_web_sm
+https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.0.0/en_core_web_lg-3.0.0.tar.gz#egg=en_core_web_lg
 pycld2
 pytest
 progress
