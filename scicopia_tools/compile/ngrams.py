@@ -13,6 +13,7 @@ from typing import Any, Iterable, Iterator
 
 import spacy
 import zstandard as zstd
+from spacy.matcher import Matcher
 from tqdm import tqdm
 
 from scicopia_tools.db.arango import DbAccess, setup
@@ -97,17 +98,71 @@ def pairwise(iterable: Iterable) -> Iterator:
     return zip(a, b)
 
 
-def export_bigrams(db_access: DbAccess, nlp: spacy.language.Language) -> Counter:
+def export_bigrams(
+    db_access: DbAccess, nlp: spacy.language.Language, patterns=False
+) -> Counter:
+    """
+    Extracts bigram frequencies of all abstracts stored in an ArangoDB collection.
+
+    Parameters
+    ----------
+    db_access : DbAccess
+        Access to the collection of the ArangoDB database one wants to access
+    nlp : spacy.language.Language
+        A spaCy language model, e.g. en_core_web_sm
+    patterns : bool, optional
+        Further analysis of neighboring tokens, by default False.
+        If True, a spaCy matcher will be used to filter most of the stopword
+        combinations that might not be of interest.
+        The matcher will also extract bigrams made up of three tokens, like
+        "Alzheimer's disease" and "human-like AI", while filtering most of the
+        other punctuation.
+
+    Returns
+    -------
+    Counter
+        Bigram frequencies
+    """
     bigrams = Counter()
 
     aql = f"FOR x IN {db_access.collection.name} FILTER x.abstract != null RETURN x.abstract"
     arango_docs = db_access.database.AQLQuery(
         aql, rawResults=True, batchSize=100, ttl=60
     )
+    if patterns:
+        matcher = Matcher(nlp.vocab)
+        # "ADJ": "adjective",
+        # "ADV": "adverb",
+        # "NOUN": "noun",
+        # "PROPN": "proper noun"
+        # "VERB": "verb",
+        # "X": "other"
+        pattern = [
+            [   # e.g. "space station"
+                {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "VERB", "X"]}},
+                {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "VERB", "X"]}},
+            ],
+            [   # e.g. "human-like AI"
+                {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "VERB", "X"]}},
+                {"ORTH": "-"},
+                {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "VERB", "X"]}},
+                {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "VERB", "X"]}},
+            ],
+            [   # e.g. "Alzheimer's disease"
+                {"POS": {"IN": ["NOUN", "PROPN"]}},
+                {"POS": "PART"},
+                {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "VERB", "X"]}},
+            ],
+        ]
+        matcher.add("Bigrams", pattern)
     for doc in tqdm(nlp.pipe(arango_docs)):
-        for sent in doc.sents:
-            word_pairs = pairwise(sent.text.split())
-            bigrams.update(list(" ".join(word_pair) for word_pair in word_pairs))
+        if not patterns:
+            for sent in doc.sents:
+                word_pairs = pairwise(sent.text.split())
+                bigrams.update(list(" ".join(word_pair) for word_pair in word_pairs))
+        else:
+            matches = matcher(doc)
+            bigrams.update(doc[start:end].text for _, start, end in matches)
     return bigrams
 
 
@@ -138,6 +193,8 @@ if __name__ == "__main__":
         type=str,
         help="Where to store the pickled bigrams",
     )
+    PARSER.add_argument("--patterns", action="store_true",
+                    help="Will use a spaCy matcher to extract bigrams")
     ARGS = PARSER.parse_args()
     try:
         arango_access = setup()
@@ -145,7 +202,9 @@ if __name__ == "__main__":
         print(e)
     else:
         spacy_model = spacy.load("en_core_web_sm", disable=["ner", "textcat"])
-        bigrams = export_bigrams(arango_access, spacy_model)
-        bigrams = clean_ngrams(bigrams)
+        PATTERNS = ARGS.patterns
+        bigrams = export_bigrams(arango_access, spacy_model, PATTERNS)
+        if not PATTERNS:
+            bigrams = clean_ngrams(bigrams)
         bigrams = lower_ngrams(bigrams)
         zstd_pickle(ARGS.output, bigrams)
