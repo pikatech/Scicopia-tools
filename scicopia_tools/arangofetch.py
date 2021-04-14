@@ -135,11 +135,12 @@ class DocTransformer:
 
         source = Stream()
         source.scatter().map(process_parallel).buffer(parallel * 2).gather().sink(log)
-        for docs in tqdm(split_batch(query, BATCHSIZE)):
-            source.emit(docs)
-
-    #           if not query.response["hasMore"]:
-    #               break
+        with tqdm(total=unfinished) as progress:
+            for docs in split_batch(query, BATCHSIZE):
+                source.emit(docs)
+                progress.update(len(docs))
+                # if not query.response["hasMore"]:
+                #     break
 
     def main(self) -> None:
         Analyzer = features[self.feature]
@@ -152,8 +153,10 @@ class DocTransformer:
             logging.info("Nothing to be done. Task %s completed.", self.feature)
             return
         self.analyzer = Analyzer()
-        for docs in tqdm(split_batch(query, BATCHSIZE)):
-            self.process_doc(docs)
+        with tqdm(total=unfinished) as progress:
+            for docs in split_batch(query, BATCHSIZE):
+                self.process_doc(docs)
+                progress.update(len(docs))
 
     def process_doc(self, docs: Tuple[Dict[str, str]]):
         updates = deque(maxlen=len(docs))
