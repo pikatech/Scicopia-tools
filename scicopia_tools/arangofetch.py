@@ -6,10 +6,10 @@ from datetime import datetime
 from typing import Dict, Tuple
 
 from dask.distributed import Client, LocalCluster, WorkerPlugin, get_worker
-from progress.bar import Bar
 from pyArango.database import Database
 from pyArango.theExceptions import UpdateError
 from streamz import Stream
+from tqdm import tqdm
 
 from scicopia_tools.analyzers.AutoTagger import AutoTagger
 from scicopia_tools.analyzers.LatexCleaner import LatexCleaner
@@ -135,13 +135,11 @@ class DocTransformer:
 
         source = Stream()
         source.scatter().map(process_parallel).buffer(parallel * 2).gather().sink(log)
-        progress = Bar("entries", max=unfinished)
-        for docs in split_batch(query, BATCHSIZE):
+        for docs in tqdm(split_batch(query, BATCHSIZE)):
             source.emit(docs)
-            progress.next(len(docs))
-#            if not query.response["hasMore"]:
-#                break
-        progress.finish()
+
+    #           if not query.response["hasMore"]:
+    #               break
 
     def main(self) -> None:
         Analyzer = features[self.feature]
@@ -154,11 +152,8 @@ class DocTransformer:
             logging.info("Nothing to be done. Task %s completed.", self.feature)
             return
         self.analyzer = Analyzer()
-        progress = Bar(" entries", max=unfinished)
-        for docs in split_batch(query, BATCHSIZE):
+        for docs in tqdm(split_batch(query, BATCHSIZE)):
             self.process_doc(docs)
-            progress.next(len(docs))
-        progress.finish()
 
     def process_doc(self, docs: Tuple[Dict[str, str]]):
         updates = deque(maxlen=len(docs))
