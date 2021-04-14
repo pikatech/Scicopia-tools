@@ -7,12 +7,15 @@ Created on Fri Mar  6 15:23:40 2020
 """
 
 from scicopia_tools.analyzers.Hearst import Hearst
+from scicopia_tools.components.ChemTagger import ChemTagger
 
 
 def test_such_as():
-    hearst = Hearst("en_core_web_sm")
+    chemicals_path = "scicopia_tools/tests/resources/chemicals.txt"
+    extra = [{"component": "chemtagger", "config": {"wordlist": chemicals_path}}]
+    hearst = Hearst("en_core_web_sm", extra)
     # Taken from: https://en.wikipedia.org/wiki/Ethyl_acetate
-    text = "In the laboratory, and usually for illustrative purposes only, ethyl esters are typically hydrolyzed in a two-step process starting with a stoichiometric amount of a strong base, such as sodium hydroxide."
+    text = "Ascorbic acid is a redox catalyst which can reduce, and thereby neutralize, reactive oxygen species such as hydrogen peroxide."
     relations = hearst.process(text)[Hearst.field]
     assert len(relations) == 1
-    assert " ".join(relations[0]) == "strong base such as sodium hydroxide"
+    assert " ".join(relations[0]) == "reactive oxygen species such as hydrogen peroxide"

@@ -15,18 +15,16 @@ from scicopia_tools.components.TaxonTagger import TaxonTagger
 def pipeline():
     import spacy
 
-    nlp = spacy.load("en_core_web_sm", disable=["ner"])
+    nlp = spacy.load("en_core_web_sm", exclude=["ner", "lemmatizer", "textcat"])
     dict_path = "scicopia_tools/tests/resources/taxa.tsv"
-    with open(dict_path, "rt") as taxa:
-        taxontagger = TaxonTagger(taxa)
-    nlp.add_pipe(taxontagger, after="tagger")
+    nlp.add_pipe("taxontagger", config={"wordlist": dict_path}, after="tagger")
     return nlp
 
 
 def test_overlap(pipeline):
-   doc = pipeline("The Burkholderia pseudomallei group contains overlapping mentions.")
-   assert len(doc.ents) == 1
-   assert doc.ents[0].text == "Burkholderia pseudomallei"
+    doc = pipeline("The Burkholderia pseudomallei group contains overlapping mentions.")
+    assert len(doc.ents) == 1
+    assert doc.ents[0].text == "Burkholderia pseudomallei"
 
 
 def test_ambiguous(pipeline):

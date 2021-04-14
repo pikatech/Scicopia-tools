@@ -11,7 +11,7 @@ import spacy
 class TextSplitter:
     field = "abstract_offsets"
     doc_section = "abstract"
-    
+
     def __init__(self, model: str = "en_core_web_lg"):
         """
         Loads a spaCy model.
@@ -26,12 +26,13 @@ class TextSplitter:
         None.
 
         """
-        self.nlp = spacy.load(model, disable=["ner", "textcat", "parser"])
-        self.nlp.add_pipe(self.nlp.create_pipe("sentencizer"))
+        self.nlp = spacy.load(model, exclude=["ner", "textcat", "parser"])
+        config = {"punct_chars": None}
+        self.nlp.add_pipe("sentencizer", config=config)
 
     def process(self, text: str):
         """
-        Splits the given text in sentences and 
+        Splits the given text in sentences and
         returns a list of tuples of start and end positions of each sentence.
 
         Parameters
@@ -50,4 +51,3 @@ class TextSplitter:
 
     def release_resources(self):
         del self.nlp
- 

@@ -10,10 +10,12 @@ import logging
 import re  # Only used in exception handling
 from collections import namedtuple
 from functools import cmp_to_key
-from typing import List
+from pathlib import Path
+from typing import Iterable, List
 
 from ahocorasick import Automaton
 from intervaltree import IntervalTree
+from spacy.language import Language
 from spacy.tokens import Span
 
 Annotation = namedtuple("Annotation", ["name", "label", "start", "end"])
@@ -53,42 +55,48 @@ NEGATIVE_TAX = set(
 )
 
 
+@Language.factory("taxontagger", default_config={"wordlist": ""})
+def my_component(nlp, name, wordlist: str):
+    return TaxonTagger(wordlist)
+
+
 class TaxonTagger:
 
     label = "TAXON"
     name = "taxon_tagger"
 
-    def __init__(self, wordlist, finalize: bool = True):
+    def __init__(self, wordlist: str, finalize: bool = True):
         """
         Creates an Aho-Corasick automaton out of a text file.
-        
+
         :param wordlist: An open file with one entity per line.
-        
+
         """
         automaton = Automaton()
         lifeforms = dict()
-        for line in wordlist:
-            id_taxons = line.rstrip().split("\t")
-            if len(id_taxons) != 2:
-                logging.warning("Found line with wrong format: %s", line)
-                continue
-            delim = id_taxons[0].rindex(":")
-            label = id_taxons[0][delim + 1 :]
-            variants = id_taxons[1].split("|")
-            for v in variants:
-                if v in NEGATIVE_TAX:
+        with open(wordlist, "rt") as taxa:
+            for line in taxa:
+                id_taxons = line.rstrip().split("\t")
+                if len(id_taxons) != 2:
+                    logging.warning("Found line with wrong format: %s", line)
                     continue
-                if v in lifeforms:
-                    dictvalue = lifeforms[v]
-                    if isinstance(dictvalue, str):
-                        dictvalue = tuple([dictvalue, label])
-                    else:  # tuple
-                        dictvalue = list(dictvalue)
-                        dictvalue.append(label)
-                        dictvalue = tuple(dictvalue)
-                    lifeforms[v] = dictvalue
-                else:
-                    lifeforms[v] = (label,)
+                delim = id_taxons[0].rindex(":")
+                label = id_taxons[0][delim + 1 :]
+                variants = id_taxons[1].split("|")
+                for v in variants:
+                    if v in NEGATIVE_TAX:
+                        continue
+                    if v in lifeforms:
+                        dictvalue = lifeforms[v]
+                        if isinstance(dictvalue, str):
+                            dictvalue = tuple([dictvalue, label])
+                        else:  # tuple
+                            dictvalue = list(dictvalue)
+                            dictvalue.append(label)
+                            dictvalue = tuple(dictvalue)
+                        lifeforms[v] = dictvalue
+                    else:
+                        lifeforms[v] = (label,)
 
         for key in lifeforms:
             if key != "":
@@ -104,14 +112,14 @@ class TaxonTagger:
     def __call__(self, doc):
         """
         Applies the tagger automaton to the text.
-    
+
         Parameters
         ----------
         text : str
             The text we want to search for entities
         tagger : Automaton
             An instance of an Aho-Corasick automaton
-        
+
         """
         text = doc.text
         annotations = []
@@ -158,32 +166,45 @@ class TaxonTagger:
             if doc.ents:
                 tree = IntervalTree()
                 for ent in doc.ents:
-                    tree[ent.start:ent.end] = ent
+                    tree[ent.start : ent.end] = ent
                 for span in spans:
                     tree.remove_overlap(span.start, span.end)
                     tree.addi(span.start, span.end, span)
-                spans = tuple(span for (_, _, span,) in tree)
+                spans = tuple(
+                    span
+                    for (
+                        _,
+                        _,
+                        span,
+                    ) in tree
+                )
                 doc.ents = spans
             else:
                 try:
                     doc.ents += tuple(spans)
                 except ValueError as e:
-                    if e.args[0].startswith('[E103]'):
+                    if e.args[0].startswith("[E103]"):
                         # Trying to set conflicting doc.ents
                         # Should have been resolved by remove_overlap (ents from same tagger)
                         # and the use of an interval tree (ents from different tagger)
-                        span_re = re.compile(f"'\\((\\d+),\\s(\\d+),\\s'{TaxonTagger.label}'\\)'")
+                        span_re = re.compile(
+                            f"'\\((\\d+),\\s(\\d+),\\s'{TaxonTagger.label}'\\)'"
+                        )
                         message = e.args[0]
                         m = span_re.search(message)
                         if not m is None:
                             start1 = int(m.group(1))
                             end1 = int(m.group(2))
-                            m = span_re.search(message, m.end()+1)
+                            m = span_re.search(message, m.end() + 1)
                             if not m is None:
                                 start2 = int(m.group(1))
                                 end2 = int(m.group(2))
                                 logging.error(e)
-                                logging.error("First span: %s, second span: %s", doc[start1:end1].text, doc[start2:end2].text)
+                                logging.error(
+                                    "First span: %s, second span: %s",
+                                    doc[start1:end1].text,
+                                    doc[start2:end2].text,
+                                )
                             else:
                                 logging.error(e)
                         else:
@@ -200,21 +221,21 @@ class TaxonTagger:
     def entity_sort(entity1: Annotation, entity2: Annotation) -> int:
         """
         A comparison function for Annotations.
-    
+
         Parameters
         ----------
         entity1 : Annotation
             An Annotation.
         entity2 : Annotation
             Another Annotation.
-    
+
         Returns
         -------
         int
             -1, if entity1 starts sooner
              1, if entity1 starts later
              the difference between the end of entity2 and entity1 otherwise.
-    
+
         """
         if entity1.start < entity2.start:
             return -1
@@ -227,17 +248,17 @@ class TaxonTagger:
         Removes shortes matches.
         E.g. when 'hydrogen peroxide' and 'hydrogen' have overlapping
         annotations, 'hydrogen peroxide' is returned.
-    
+
         Parameters
         ----------
         entities : List[Annotation]
             A list of entities extracted from a text.
-    
+
         Returns
         -------
         List[Annotation]
             The widest annotations in case of an overlap.
-    
+
         """
         filtered = []
         start = -1

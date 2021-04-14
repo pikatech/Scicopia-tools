@@ -20,7 +20,7 @@ class Hearst:
     field = "hearst"
     doc_section = "abstract"
 
-    def __init__(self, model: str = "en_core_web_lg"):
+    def __init__(self, model: str = "en_core_web_lg", extra=[]):
         """
         Loads a spaCy model.
 
@@ -34,7 +34,11 @@ class Hearst:
         None.
 
         """
-        self.nlp = spacy.load(model, disable=["ner"])
+        self.nlp = spacy.load(model, exclude=["ner", "textcat"])
+        for add_me in extra:
+            if "component" in add_me and "config" in add_me:
+                self.nlp.add_pipe(add_me["component"], config=add_me["config"])
+
         self.IntervalKey = cmp_to_key(self.interval_sort)
 
     def interval_sort(self, entity1, entity2) -> int:
@@ -74,22 +78,22 @@ class Hearst:
     def process(self, text: str) -> List[Tuple[str]]:
         """
         Extended information on the technique can be found in the original paper:
-    
+
         Hearst, M. A.
         Automatic Acquisition of Hyponyms from Large Text Corpora
         COLING 1992 Volume 2: The 15th International Conference on Computational Linguistics, 1992
         https://www.aclweb.org/anthology/C92-2082
-    
+
         Parameters
         ----------
         text : str
             Raw text.
-    
+
         Returns
         -------
         List[Tuple[str]]
             A list of 3-tuples stating hyponymy relations, e.g. [('X', 'such as', 'Y')].
-    
+
         """
         doc = self.nlp(text)
         hits = []
@@ -103,6 +107,7 @@ class Hearst:
             graph = nx.Graph(edges)
             candidates = list(sent.noun_chunks)
             candidates = self.conflate_conjuncts(candidates)
+            print(f"candidates: {candidates}")
 
             for source, target in itertools.combinations(candidates, 2):
                 source_root = source[0].root.i
@@ -119,15 +124,19 @@ class Hearst:
                         and doc[path[1] - 1].text == "such"
                     ):
                         span1 = source[0]
-                        if doc[span1.start].pos_ == "DET":
+                        if (
+                            doc[span1.start].pos_ == "DET"
+                            or doc[span1.start].pos_ == "PUNCT"
+                        ):
                             span1 = Span(doc, span1.start + 1, span1.end)
                         for t in target:
                             span2 = t
                             if doc[span2.start].pos_ == "DET":
                                 span2 = Span(doc, span2.start + 1, span2.end)
-                            hits.append((span1.lemma_, "such as", span2.lemma_))
+                            hits.append((span1.text, "such as", span2.text))
                 except nx.NetworkXNoPath:
                     pass
+        print(hits)
         return {Hearst.field: hits}
 
     def release_resources(self):

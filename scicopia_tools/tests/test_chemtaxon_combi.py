@@ -16,17 +16,12 @@ from scicopia_tools.components.TaxonTagger import TaxonTagger
 def pipeline():
     import spacy
 
-    nlp = spacy.load("en_core_web_sm", disable=["ner"])
+    nlp = spacy.load("en_core_web_sm", exclude=["ner", "lemmatizer", "textcat"])
     dict_path = "scicopia_tools/tests/resources/taxa.tsv"
-    with open(dict_path, "rt") as taxa:
-        taxontagger = TaxonTagger(taxa)
-    # tagger -> taxontagger
-    nlp.add_pipe(taxontagger, after="tagger")
+    nlp.add_pipe("taxontagger", config={"wordlist": dict_path}, after="tagger")
     chemicals_path = "scicopia_tools/tests/resources/chemicals.txt"
-    with open(chemicals_path, "rt") as chemicals:
-        chemtagger = ChemTagger(chemicals, "CHEMICAL")
     # tagger -> chemtagger -> taxontagger
-    nlp.add_pipe(chemtagger, after="tagger")
+    nlp.add_pipe("chemtagger", config={"wordlist": chemicals_path}, after="tagger")
     return nlp
 
 

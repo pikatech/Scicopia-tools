@@ -10,12 +10,14 @@ import logging
 import re  # Only used in exception handling
 from collections import namedtuple
 from functools import cmp_to_key
-from typing import List
+from typing import Iterable, List
 
 from ahocorasick import Automaton
 from intervaltree import IntervalTree
+from spacy.language import Language
 from spacy.parts_of_speech import NOUN
 from spacy.tokens import Span
+
 
 Annotation = namedtuple("Annotation", ["name", "label", "start", "end"])
 
@@ -33,42 +35,48 @@ might_be_nouns = [
 ]
 
 
+@Language.factory("chemtagger", default_config={"wordlist": []})
+def my_component(nlp, name, wordlist: str):
+    return ChemTagger(wordlist)
+
+
 class ChemTagger:
 
     name = "dictionary_tagger"
 
-    def __init__(self, wordlist, label="CHEMICAL", finalize: bool = True):
+    def __init__(self, wordlist: str, label="CHEMICAL", finalize: bool = True):
         """
         Creates an Aho-Corasick automaton out of a text file.
-        
+
         :param wordlist: An open file with one entity per line.
-        
+
         """
         automaton = Automaton()
-        for line in wordlist:
-            line = line.rstrip()
-            if line:
-                automaton.add_word(line, line)
-                # Uppercase at the start of a sentence
-                sent_start = f"{line[0].title()}{line[1:]}"
-                automaton.add_word(sent_start, sent_start)
-        if finalize:
-            automaton.make_automaton()
-        self.automaton = automaton
-        self.label = label
-        self.EntityKey = cmp_to_key(ChemTagger.entity_sort)
+        with open(wordlist, "rt") as chemicals:
+            for line in chemicals:
+                line = line.rstrip()
+                if line:
+                    automaton.add_word(line, line)
+                    # Uppercase at the start of a sentence
+                    sent_start = f"{line[0].title()}{line[1:]}"
+                    automaton.add_word(sent_start, sent_start)
+            if finalize:
+                automaton.make_automaton()
+            self.automaton = automaton
+            self.label = label
+            self.EntityKey = cmp_to_key(ChemTagger.entity_sort)
 
     def __call__(self, doc):
         """
         Applies the tagger automaton to the text.
-    
+
         Parameters
         ----------
         text : str
             The text we want to search for entities
         tagger : Automaton
             An instance of an Aho-Corasick automaton
-        
+
         """
         text = doc.text
         annotations = []
@@ -105,32 +113,45 @@ class ChemTagger:
             if doc.ents:
                 tree = IntervalTree()
                 for ent in doc.ents:
-                    tree[ent.start:ent.end] = ent
+                    tree[ent.start : ent.end] = ent
                 for span in spans:
                     tree.remove_overlap(span.start, span.end)
                     tree.addi(span.start, span.end, span)
-                spans = tuple(span for (_, _, span,) in tree)
+                spans = tuple(
+                    span
+                    for (
+                        _,
+                        _,
+                        span,
+                    ) in tree
+                )
                 doc.ents = spans
             else:
                 try:
                     doc.ents += tuple(spans)
                 except ValueError as e:
-                    if e.args[0].startswith('[E103]'):
+                    if e.args[0].startswith("[E103]"):
                         # Trying to set conflicting doc.ents
                         # Should have been resolved by remove_overlap (ents from same tagger)
                         # and the use of an interval tree (ents from different tagger)
-                        span_re = re.compile(f"'\\((\\d+),\\s(\\d+),\\s'{self.label}'\\)'")
+                        span_re = re.compile(
+                            f"'\\((\\d+),\\s(\\d+),\\s'{self.label}'\\)'"
+                        )
                         message = e.args[0]
                         m = span_re.search(message)
                         if not m is None:
                             start1 = int(m.group(1))
                             end1 = int(m.group(2))
-                            m = span_re.search(message, m.end()+1)
+                            m = span_re.search(message, m.end() + 1)
                             if not m is None:
                                 start2 = int(m.group(1))
                                 end2 = int(m.group(2))
                                 logging.error(e)
-                                logging.error("First span: %s, second span: %s", doc[start1:end1].text, doc[start2:end2].text)
+                                logging.error(
+                                    "First span: %s, second span: %s",
+                                    doc[start1:end1].text,
+                                    doc[start2:end2].text,
+                                )
                             else:
                                 logging.error(e)
                         else:
@@ -147,21 +168,21 @@ class ChemTagger:
     def entity_sort(entity1: Annotation, entity2: Annotation) -> int:
         """
         A comparison function for Annotations.
-    
+
         Parameters
         ----------
         entity1 : Annotation
             An Annotation.
         entity2 : Annotation
             Another Annotation.
-    
+
         Returns
         -------
         int
             -1, if entity1 starts sooner
              1, if entity1 starts later
              the difference between the end of entity2 and entity1 otherwise.
-    
+
         """
         if entity1.start < entity2.start:
             return -1
@@ -174,17 +195,17 @@ class ChemTagger:
         Removes shortes matches.
         E.g. when 'hydrogen peroxide' and 'hydrogen' have overlapping
         annotations, 'hydrogen peroxide' is returned.
-    
+
         Parameters
         ----------
         entities : List[Annotation]
             A list of entities extracted from a text.
-    
+
         Returns
         -------
         List[Annotation]
             The widest annotations in case of an overlap.
-    
+
         """
         filtered = []
         start = -1

@@ -138,17 +138,17 @@ def export_bigrams(
         # "VERB": "verb",
         # "X": "other"
         pattern = [
-            [   # e.g. "space station"
+            [  # e.g. "space station"
                 {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "VERB", "X"]}},
                 {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "VERB", "X"]}},
             ],
-            [   # e.g. "human-like AI"
+            [  # e.g. "human-like AI"
                 {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "VERB", "X"]}},
                 {"ORTH": "-"},
                 {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "VERB", "X"]}},
                 {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "VERB", "X"]}},
             ],
-            [   # e.g. "Alzheimer's disease"
+            [  # e.g. "Alzheimer's disease"
                 {"POS": {"IN": ["NOUN", "PROPN"]}},
                 {"POS": "PART"},
                 {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "VERB", "X"]}},
@@ -193,15 +193,18 @@ if __name__ == "__main__":
         type=str,
         help="Where to store the pickled bigrams",
     )
-    PARSER.add_argument("--patterns", action="store_true",
-                    help="Will use a spaCy matcher to extract bigrams")
+    PARSER.add_argument(
+        "--patterns",
+        action="store_true",
+        help="Will use a spaCy matcher to extract bigrams",
+    )
     ARGS = PARSER.parse_args()
     try:
         arango_access = setup()
     except ScicopiaException as e:
         print(e)
     else:
-        spacy_model = spacy.load("en_core_web_sm", disable=["ner", "textcat"])
+        spacy_model = spacy.load("en_core_web_sm", exclude=["ner", "textcat"])
         PATTERNS = ARGS.patterns
         bigrams = export_bigrams(arango_access, spacy_model, PATTERNS)
         if not PATTERNS:

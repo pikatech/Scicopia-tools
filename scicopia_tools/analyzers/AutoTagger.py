@@ -15,7 +15,7 @@ from nltk.corpus import stopwords
 class AutoTagger:
     field = "auto_tags"
     doc_section = "abstract"
-    
+
     def __init__(self, model: str = "en_core_web_lg"):
         """
         Loads a spaCy model to be used with pke.
@@ -30,8 +30,9 @@ class AutoTagger:
         None.
 
         """
-        self.nlp = spacy.load(model, disable=["ner", "textcat", "parser"])
-        self.nlp.add_pipe(self.nlp.create_pipe("sentencizer"))
+        self.nlp = spacy.load(model, exclude=["ner", "textcat", "parser"])
+        config = {"punct_chars": None}
+        self.nlp.add_pipe("sentencizer", config=config)
 
     def process(self, doc: str):
         """
@@ -39,7 +40,7 @@ class AutoTagger:
         (Python Keyphrase Extraction toolkit).
         Details are given in https://arxiv.org/abs/1803.0872 and
         https://boudinfl.github.io/pke/build/html/unsupervised.html#multipartiterank
-    
+
         Parameters
         ----------
         doc : str
