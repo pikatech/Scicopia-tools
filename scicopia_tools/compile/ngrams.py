@@ -72,13 +72,13 @@ def lower_ngrams(ngrams: Counter) -> Counter:
     return lowercased_ngrams
 
 
-def pairwise(iterable: Iterable) -> Iterator:
+def ngrams(iterable: Iterable, n=3):
     """
     Generate an iterator returning a sequence of adjacent items
     in the iterable.
-    s -> (s0,s1), (s1,s2), (s2, s3), ...
+    s -> (s0, s1, s2), (s1, s2, s3), (s2, s3, s4), ...
 
-    Taken straight from
+    A generalization of the pairwise function from
     https://docs.python.org/3/library/itertools.html#itertools-recipes
 
     Parameters
@@ -87,22 +87,27 @@ def pairwise(iterable: Iterable) -> Iterator:
         A generic Iterable containing any values.
         In the context of this module, these values will be
         of type 'str'.
+    n : int, optional
+        The order of the n-grams, by default 3
 
     Returns
     -------
     Iterator
         A sequence of adjacent items in this iterable
     """
-    a, b = tee(iterable)
-    next(b, None)
-    return zip(a, b)
+    iterables = tee(iterable, n)
+    for i, part in enumerate(iterables):
+        # Shift iterators accordingly
+        for _ in range(i):
+            next(part, None)
+    return zip(*iterables)
 
 
-def export_bigrams(
-    db_access: DbAccess, nlp: spacy.language.Language, patterns=False
+def export_ngrams(
+    db_access: DbAccess, nlp: spacy.language.Language, n: int, patterns=False
 ) -> Counter:
     """
-    Extracts bigram frequencies of all abstracts stored in an ArangoDB collection.
+    Extracts n-gram frequencies of all abstracts stored in an ArangoDB collection.
 
     Parameters
     ----------
@@ -121,15 +126,22 @@ def export_bigrams(
     Returns
     -------
     Counter
-        Bigram frequencies
+        n-gram frequencies
+
+    Raises
+    ------
+    ValueError
+        In case that the 'patterns' options is used for anything but bigrams
     """
-    bigrams = Counter()
+    ngrams = Counter()
 
     aql = f"FOR x IN {db_access.collection.name} FILTER x.abstract != null RETURN x.abstract"
     arango_docs = db_access.database.AQLQuery(
         aql, rawResults=True, batchSize=100, ttl=60
     )
     if patterns:
+        if n != 2:
+            raise ValueError("Patterns can only be used for bigrams.")
         matcher = Matcher(nlp.vocab)
         # "ADJ": "adjective",
         # "ADV": "adverb",
@@ -155,15 +167,16 @@ def export_bigrams(
             ],
         ]
         matcher.add("Bigrams", pattern)
-    for doc in tqdm(nlp.pipe(arango_docs)):
-        if not patterns:
-            for sent in doc.sents:
-                word_pairs = pairwise(sent.text.split())
-                bigrams.update(list(" ".join(word_pair) for word_pair in word_pairs))
-        else:
+        for doc in tqdm(nlp.pipe(arango_docs)):
             matches = matcher(doc)
-            bigrams.update(doc[start:end].text for _, start, end in matches)
-    return bigrams
+            ngrams.update(doc[start:end].text for _, start, end in matches)
+    else:
+        for doc in tqdm(nlp.pipe(arango_docs)):
+            if not patterns:
+                for sent in doc.sents:
+                    n_words = ngrams(sent.text.split(), n=n)
+                    ngrams.update(list(" ".join(words) for words in n_words))
+    return ngrams
 
 
 def zstd_pickle(filename: str, obj: Any, protocol: int = 4):
@@ -196,7 +209,13 @@ if __name__ == "__main__":
     PARSER.add_argument(
         "--patterns",
         action="store_true",
-        help="Will use a spaCy matcher to extract bigrams",
+        help="Use a spaCy matcher to extract bigrams. Can only be used for bigrams.",
+    )
+    PARSER.add_argument(
+        "-n",
+        type="int",
+        default=2,
+        help="The order of the n-grams, by default 2",
     )
     ARGS = PARSER.parse_args()
     try:
@@ -206,7 +225,7 @@ if __name__ == "__main__":
     else:
         spacy_model = spacy.load("en_core_web_sm", exclude=["ner", "textcat"])
         PATTERNS = ARGS.patterns
-        bigrams = export_bigrams(arango_access, spacy_model, PATTERNS)
+        bigrams = export_ngrams(arango_access, spacy_model, ARGS.n, PATTERNS)
         if not PATTERNS:
             bigrams = clean_ngrams(bigrams)
         bigrams = lower_ngrams(bigrams)
