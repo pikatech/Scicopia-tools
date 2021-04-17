@@ -82,10 +82,12 @@ def test_bigram_export_patterns(pipeline):
     ]
     counts = Counter(
         {
+            "had Alzheimer": 1,
             "Alzheimer's disease": 1,
             "space station": 1,
             "human-like AI": 1,
             "like AI": 1,
+            "be human": 1
         }
     )
 

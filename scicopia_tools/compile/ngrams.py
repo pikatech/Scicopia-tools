@@ -165,7 +165,7 @@ def export_ngrams(
         # "X": "other"
         pattern = [
             [  # e.g. "space station"
-                {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "X"]}},
+                {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "VERB", "X"]}},
                 {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "VERB", "X"]}},
             ],
             [  # e.g. "human-like AI"
