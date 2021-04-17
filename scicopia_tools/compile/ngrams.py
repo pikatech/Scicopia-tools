@@ -249,6 +249,12 @@ if __name__ == "__main__":
         default=2,
         help="The order of the n-grams, by default 2",
     )
+    PARSER.add_argument(
+        "--threshold", "-t",
+        type="int",
+        default=0,
+        help="A threshold for n-gram frequencies to be kept, by default 0",
+    )
     ARGS = PARSER.parse_args()
     try:
         arango_access = setup()
@@ -258,8 +264,13 @@ if __name__ == "__main__":
     else:
         spacy_model = spacy.load("en_core_web_sm", exclude=["ner", "textcat"])
         PATTERNS = ARGS.patterns
-        bigrams = export_ngrams(db_docs, spacy_model, ARGS.n, PATTERNS)
+        frequencies = export_ngrams(db_docs, spacy_model, ARGS.n, PATTERNS)
         if not PATTERNS:
-            bigrams = clean_ngrams(bigrams)
-        bigrams = lower_ngrams(bigrams)
-        zstd_pickle(ARGS.output, bigrams)
+            frequencies = clean_ngrams(frequencies)
+        frequencies = lower_ngrams(frequencies)
+        THRESHOLD = ARGS.threshold
+        if THRESHOLD <= 0:
+            pass
+        else:
+            frequencies = trim_ngrams(frequencies)
+        zstd_pickle(ARGS.output, frequencies)
