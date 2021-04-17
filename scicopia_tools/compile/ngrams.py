@@ -72,6 +72,24 @@ def lower_ngrams(ngrams: Counter) -> Counter:
     return lowercased_ngrams
 
 
+def trim_ngrams(ngrams: Counter, threshold: int=2) -> Counter:
+    """
+    Remove all strings in the Counter with a frequency lower
+    than a threshold.
+
+    Parameters
+    ----------
+    ngrams : Counter
+        A Counter of strings, in this case n-grams
+
+    Returns
+    -------
+    Counter
+        A Counter of trimmed frequencies
+    """
+    return Counter({k: v for k,v in ngrams.items() if v >= threshold})
+
+
 def ngrams(iterable: Iterable, n=3):
     """
     Generate an iterator returning a sequence of adjacent items

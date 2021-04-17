@@ -5,16 +5,15 @@ Created on Fri Apr 16 17:30:18 2021
 
 @author: tech
 """
-import copy
-from collections import Counter
-
 import pytest
+from collections import Counter
 
 from scicopia_tools.compile.ngrams import (
     clean_ngrams,
     export_ngrams,
     lower_ngrams,
     ngrams,
+    trim_ngrams
 )
 
 
@@ -56,6 +55,16 @@ def test_simple_bigrams():
 
     bigrams = Counter(" ".join(x) for x in ngrams(text.split(), 2))
     assert bigrams == counts
+
+
+def test_trim_bigrams():
+    counts = Counter(
+        {"This is": 1, "is a": 1, "a test.": 2, "test. Just": 1, "Just a": 1}
+    )
+    expected = Counter({"a test.": 2})
+
+    thresholded_counts = trim_ngrams(counts, 2)
+    assert thresholded_counts == expected
 
 
 def test_bigram_export(pipeline):
