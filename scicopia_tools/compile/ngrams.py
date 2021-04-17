@@ -104,15 +104,15 @@ def ngrams(iterable: Iterable, n=3):
 
 
 def export_ngrams(
-    db_access: DbAccess, nlp: spacy.language.Language, n: int, patterns=False
+    docs: Iterator[str], nlp: spacy.language.Language, n: int, patterns=False
 ) -> Counter:
     """
-    Extracts n-gram frequencies of all abstracts stored in an ArangoDB collection.
+    Extracts n-gram frequencies of a series of documents
 
     Parameters
     ----------
-    db_access : DbAccess
-        Access to the collection of the ArangoDB database one wants to access
+    docs : Iterator[str]
+        An iterator of documents, e.g. abstracts
     nlp : spacy.language.Language
         A spaCy language model, e.g. en_core_web_sm
     patterns : bool, optional
@@ -133,12 +133,8 @@ def export_ngrams(
     ValueError
         In case that the 'patterns' options is used for anything but bigrams
     """
-    ngrams = Counter()
+    n_grams = Counter()
 
-    aql = f"FOR x IN {db_access.collection.name} FILTER x.abstract != null RETURN x.abstract"
-    arango_docs = db_access.database.AQLQuery(
-        aql, rawResults=True, batchSize=100, ttl=60
-    )
     if patterns:
         if n != 2:
             raise ValueError("Patterns can only be used for bigrams.")
@@ -151,7 +147,7 @@ def export_ngrams(
         # "X": "other"
         pattern = [
             [  # e.g. "space station"
-                {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "VERB", "X"]}},
+                {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "X"]}},
                 {"POS": {"IN": ["ADJ", "ADV", "NOUN", "PROPN", "VERB", "X"]}},
             ],
             [  # e.g. "human-like AI"
@@ -167,16 +163,15 @@ def export_ngrams(
             ],
         ]
         matcher.add("Bigrams", pattern)
-        for doc in tqdm(nlp.pipe(arango_docs)):
+        for doc in tqdm(nlp.pipe(docs)):
             matches = matcher(doc)
-            ngrams.update(doc[start:end].text for _, start, end in matches)
+            n_grams.update(doc[start:end].text for _, start, end in matches)
     else:
-        for doc in tqdm(nlp.pipe(arango_docs)):
-            if not patterns:
-                for sent in doc.sents:
-                    n_words = ngrams(sent.text.split(), n=n)
-                    ngrams.update(list(" ".join(words) for words in n_words))
-    return ngrams
+        for doc in tqdm(nlp.pipe(docs)):
+            for sent in doc.sents:
+                n_words = ngrams(sent.text.split(), n=n)
+                n_grams.update(list(" ".join(words) for words in n_words))
+    return n_grams
 
 
 def zstd_pickle(filename: str, obj: Any, protocol: int = 4):
@@ -197,6 +192,25 @@ def zstd_pickle(filename: str, obj: Any, protocol: int = 4):
     with open(filename, "wb") as fh:
         with cctx.stream_writer(fh) as compressor:
             pickle.dump(obj, compressor, protocol=protocol)
+
+
+def fetch_abstracts(db_access: DbAccess) -> Iterator[str]:
+    """
+    Fetches the abstracts of all documents in a collection that have them.
+
+    Parameters
+    ----------
+    db_access : DbAccess
+        Access to the collection of the ArangoDB database one wants to access
+
+    Returns
+    -------
+    Iterator[str]
+        An iterator of all available abstracts
+    """
+    aql = f"FOR x IN {db_access.collection.name} FILTER x.abstract != null RETURN x.abstract"
+    docs = db_access.database.AQLQuery(aql, rawResults=True, batchSize=100, ttl=60)
+    return docs
 
 
 if __name__ == "__main__":
@@ -220,12 +234,13 @@ if __name__ == "__main__":
     ARGS = PARSER.parse_args()
     try:
         arango_access = setup()
+        db_docs = fetch_abstracts(arango_access)
     except ScicopiaException as e:
         print(e)
     else:
         spacy_model = spacy.load("en_core_web_sm", exclude=["ner", "textcat"])
         PATTERNS = ARGS.patterns
-        bigrams = export_ngrams(arango_access, spacy_model, ARGS.n, PATTERNS)
+        bigrams = export_ngrams(db_docs, spacy_model, ARGS.n, PATTERNS)
         if not PATTERNS:
             bigrams = clean_ngrams(bigrams)
         bigrams = lower_ngrams(bigrams)
