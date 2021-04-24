@@ -245,13 +245,13 @@ if __name__ == "__main__":
     )
     PARSER.add_argument(
         "-n",
-        type="int",
+        type=int,
         default=2,
         help="The order of the n-grams, by default 2",
     )
     PARSER.add_argument(
         "--threshold", "-t",
-        type="int",
+        type=int,
         default=0,
         help="A threshold for n-gram frequencies to be kept, by default 0",
     )
