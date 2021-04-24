@@ -12,11 +12,10 @@ from streamz import Stream
 from tqdm import tqdm
 
 from scicopia_tools.analyzers.AutoTagger import AutoTagger
-from scicopia_tools.analyzers.LatexCleaner import LatexCleaner
 from scicopia_tools.analyzers.TextSplitter import TextSplitter
 from scicopia_tools.db.arango import setup
 
-features = {"auto_tag": AutoTagger, "split": TextSplitter, "clean": LatexCleaner}
+features = {"auto_tag": AutoTagger, "split": TextSplitter}
 BATCHSIZE = 100
 
 
@@ -189,7 +188,7 @@ if __name__ == "__main__":
         description="Use feature to update Arango database"
     )
     PARSER.add_argument(
-        "feature", choices=["auto_tag", "split", "clean"], help="Feature to use."
+        "feature", choices=["auto_tag", "split"], help="Feature to use."
     )
     PARSER.add_argument(
         "-p",
