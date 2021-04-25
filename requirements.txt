@@ -2,6 +2,7 @@ dask==2021.3.0
 dask-jobqueue==0.7.2
 distributed==2021.3.0
 intervaltree==3.1.0
+language_data==1.0
 nltk==3.6.1
 git+https://github.com/boudinfl/pke.git@aa7df17214252b6bab2f1988eba89fdce8050818
 pyahocorasick==1.4.2
