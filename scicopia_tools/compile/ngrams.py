@@ -262,7 +262,7 @@ if __name__ == "__main__":
     except ScicopiaException as e:
         print(e)
     else:
-        spacy_model = spacy.load("en_core_web_sm", exclude=["ner", "textcat"])
+        spacy_model = spacy.load("en_core_web_lg", exclude=["ner", "textcat"])
         PATTERNS = ARGS.patterns
         frequencies = export_ngrams(db_docs, spacy_model, ARGS.n, PATTERNS)
         if not PATTERNS:
