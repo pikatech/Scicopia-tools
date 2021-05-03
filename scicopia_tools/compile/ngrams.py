@@ -93,6 +93,12 @@ ngram_masks = {
             {"POS": {"IN": ["NOUN", "PROPN"]}},
             {"POS": {"IN": ["NOUN", "PROPN"]}},
         ],
+        [  # e.g. "query auto-completion"
+            {"POS": {"IN": ["NOUN", "PROPN"]}},
+            {"POS": {"IN": ["NOUN", "PROPN"]}},
+            {"ORTH": "-"},
+            {"POS": {"IN": ["NOUN", "PROPN"]}},
+        ],
         [  # e.g. "continuous-state puddle-world"
             {"POS": "ADJ"},
             {"ORTH": "-"},
