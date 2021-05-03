@@ -85,7 +85,21 @@ def test_bigram_export_patterns(pipeline):
             "Alzheimer's disease": 1,
             "space station": 1,
             "human-like AI": 1,
-            "like AI": 1
+        }
+    )
+
+    bigrams = export_ngrams(text, pipeline, n=2, patterns=True)
+    assert bigrams == counts
+
+def test_bigram_hyphen_filter(pipeline):
+    text = [
+        "We expect state-of-the-art performance of our new query auto-completion.",
+    ]
+    counts = Counter(
+        {
+            "state-of-the-art performance": 1,
+            "query auto-completion": 1,
+            "new query": 1,
         }
     )
 

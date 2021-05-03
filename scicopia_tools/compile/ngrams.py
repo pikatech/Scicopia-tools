@@ -588,8 +588,10 @@ def export_ngrams(
             candidates = (
                 doc[start:end].text
                 for _, start, end in matches
-                if start - 1 >= 0 and doc[start - 1].text != "-" or start == 0
+                if (start - 1 >= 0 and doc[start - 1].text != "-" or start == 0)
+                if (end != len(doc) and doc[end].text != "-" or end == len(doc))
             )
+            for _, start, end in matches: print(doc[start:end].text)
             # some n-grams are part of bigger m-grams and might
             # start or end with a '-' because of that
             n_grams.update(
