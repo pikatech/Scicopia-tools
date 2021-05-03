@@ -458,7 +458,7 @@ def clean_ngrams(ngrams: Counter) -> Counter:
     Counter
         A new collection of filtered text fragments
     """
-    punct = [",", ":", ";", "?", "!"]
+    punct = [",", ":", ";", "?", "!", "-"]
     cleaned_ngrams = Counter(
         {
             k: v
@@ -578,7 +578,10 @@ def export_ngrams(
         matcher.add("N-grams", ngram_masks[n])
         for doc in tqdm(nlp.pipe(docs)):
             matches = matcher(doc)
-            n_grams.update(doc[start:end].text for _, start, end in matches)
+            candidates = (doc[start:end].text for _, start, end in matches)
+            # some n-grams are part of bigger m-grams and might
+            # start or end with a '-' because of that
+            n_grams.update(c for c in candidates if not c.startswith('-') and not c.endswith('-'))
     else:
         for doc in tqdm(nlp.pipe(docs)):
             for sent in doc.sents:
@@ -660,8 +663,7 @@ if __name__ == "__main__":
         spacy_model = spacy.load("en_core_web_lg", exclude=["ner", "textcat"])
         PATTERNS = ARGS.patterns
         frequencies = export_ngrams(db_docs, spacy_model, ARGS.n, PATTERNS)
-        if not PATTERNS:
-            frequencies = clean_ngrams(frequencies)
+        frequencies = clean_ngrams(frequencies)
         frequencies = lower_ngrams(frequencies)
         THRESHOLD = ARGS.threshold
         if THRESHOLD <= 0:
