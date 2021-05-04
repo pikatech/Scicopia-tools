@@ -13,7 +13,7 @@ from scicopia_tools.compile.ngrams import (
     export_ngrams,
     lower_ngrams,
     ngrams,
-    trim_ngrams
+    trim_ngrams,
 )
 
 
@@ -21,7 +21,7 @@ from scicopia_tools.compile.ngrams import (
 def pipeline():
     import spacy
 
-    nlp = spacy.load("en_core_web_sm", exclude=["ner", "lemmatizer", "textcat"])
+    nlp = spacy.load("en_core_web_lg", exclude=["ner", "lemmatizer", "textcat"])
     return nlp
 
 
@@ -71,7 +71,25 @@ def test_bigram_export(pipeline):
     text = ["This is a test.", "Just a test."]
     counts = Counter({"This is": 1, "is a": 1, "a test.": 2, "Just a": 1})
 
-    bigrams = export_ngrams(text, pipeline, n=2)
+    bigrams = export_ngrams(text, pipeline, n="2")
+    assert bigrams == counts
+
+
+def test_bi_trigram_export(pipeline):
+    text = ["This is a test.", "Just a test."]
+    counts = Counter(
+        {
+            "This is": 1,
+            "is a": 1,
+            "a test.": 2,
+            "Just a": 1,
+            "This is a": 1,
+            "is a test.": 1,
+            "Just a test.": 1,
+        }
+    )
+
+    bigrams = export_ngrams(text, pipeline, n="2-3")
     assert bigrams == counts
 
 
@@ -88,8 +106,9 @@ def test_bigram_export_patterns(pipeline):
         }
     )
 
-    bigrams = export_ngrams(text, pipeline, n=2, patterns=True)
+    bigrams = export_ngrams(text, pipeline, n="2", patterns=True)
     assert bigrams == counts
+
 
 def test_bigram_hyphen_filter(pipeline):
     text = [
@@ -103,5 +122,38 @@ def test_bigram_hyphen_filter(pipeline):
         }
     )
 
-    bigrams = export_ngrams(text, pipeline, n=2, patterns=True)
+    bigrams = export_ngrams(text, pipeline, n="2", patterns=True)
     assert bigrams == counts
+
+
+def test_bi_trigram_hyphen_filter(pipeline):
+    text = [
+        "We expect state-of-the-art performance of our new query auto-completion.",
+    ]
+    counts = Counter(
+        {
+            "state-of-the-art performance": 1,
+            "query auto-completion": 1,
+            "new query": 1,
+            "new query auto-completion": 1,
+        }
+    )
+
+    bigrams = export_ngrams(text, pipeline, n="2-3", patterns=True)
+    assert bigrams == counts
+
+
+def test_bi_trigram_filter(pipeline):
+    text = [
+        "Flexible A* algorithms, particularly iterative deepening A*, are valuable here.",
+    ]
+    counts = Counter(
+        {
+            "A*": 1,
+            "deepening A*": 1,
+            "iterative deepening A*": 1,
+        }
+    )
+
+    bi_trigrams = export_ngrams(text, pipeline, n="2-4", patterns=True)
+    assert bi_trigrams == counts

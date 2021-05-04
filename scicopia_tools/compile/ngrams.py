@@ -177,6 +177,13 @@ ngram_masks = {
             {"POS": {"IN": ["NOUN", "PROPN"]}},
             {"POS": {"IN": ["NOUN", "PROPN"]}},
         ],
+        [  # e.g. "new query auto-completion"
+            {"POS": "ADJ"},
+            {"POS": {"IN": ["NOUN", "PROPN"]}},
+            {"POS": {"IN": ["NOUN", "PROPN"]}},
+            {"ORTH": "-"},
+            {"POS": {"IN": ["NOUN", "PROPN"]}},
+        ],
         [  # e.g. "model-free control options",
             {"POS": {"IN": ["NOUN", "PROPN"]}},
             {"ORTH": "-"},
@@ -259,6 +266,12 @@ ngram_masks = {
             {"DEP": "advmod"},
             {"DEP": "amod"},
             {"DEP": "pobj"},
+        ],
+        [  # e.g. "deepening A*"
+            # "A" and "*" are treated separately
+            {"DEP": "compound"},
+            {"POS": {"IN": ["NOUN", "PROPN"]}},
+            {"POS": {"IN": ["NOUN", "PROPN"]}},
         ],
     ],
     4: [
@@ -356,6 +369,13 @@ ngram_masks = {
             {"ORTH": "-"},
             {"POS": "ADJ"},
             {"POS": "ADJ"},
+            {"POS": {"IN": ["NOUN", "PROPN"]}},
+        ],
+        [  # e.g. "iterative deepening A*"
+            # "A" and "*" are treated separately
+            {"DEP": "amod"},
+            {"DEP": "compound"},
+            {"POS": {"IN": ["NOUN", "PROPN"]}},
             {"POS": {"IN": ["NOUN", "PROPN"]}},
         ],
     ],
@@ -547,7 +567,7 @@ def ngrams(iterable: Iterable, n=3):
 
 
 def export_ngrams(
-    docs: Iterator[str], nlp: spacy.language.Language, n: int, patterns=False
+    docs: Iterator[str], nlp: spacy.language.Language, n: str, patterns=False
 ) -> Counter:
     """
     Extracts n-gram frequencies of a series of documents
@@ -577,31 +597,48 @@ def export_ngrams(
         In case that the 'patterns' options is used for anything but bigrams
     """
     n_grams = Counter()
+    if "-" in n:
+        parts = n.split("-")
+        if len(parts) != 2:
+            raise ValueError(f"Order of n-grams has wrong format: {n}")
+        # Potential ValueErrors might be raised here
+        start = int(parts[0])
+        end = int(parts[1])
+        ns = range(start, end + 1)
+    else:
+        ns = [int(n)]
 
     if patterns:
-        if not 1 <= n <= 5:
+        if not all(1 <= i <= 5 for i in ns):
             raise ValueError("Patterns can only be used for n-grams with n <= 5.")
         matcher = Matcher(nlp.vocab)
-        matcher.add("N-grams", ngram_masks[n])
+        for i in ns:
+            matcher.add(f"{i}-grams", ngram_masks[i])
         for doc in tqdm(nlp.pipe(docs)):
             matches = matcher(doc)
             candidates = (
                 doc[start:end].text
                 for _, start, end in matches
-                if (start - 1 >= 0 and doc[start - 1].text != "-" or start == 0)
-                if (end != len(doc) and doc[end].text != "-" or end == len(doc))
+                if (start - 1 >= 0 and doc[start - 1].text not in ("-") or start == 0)
+                if (
+                    end != len(doc)
+                    and doc[end].text not in ("-", "*")
+                    or end == len(doc)
+                )
             )
-            for _, start, end in matches: print(doc[start:end].text)
+            for _, start, end in matches:
+                print(doc[start:end].text)
             # some n-grams are part of bigger m-grams and might
             # start or end with a '-' because of that
             n_grams.update(
-                c for c in candidates if not c.startswith("-") and not c.endswith("-")
+                c for c in candidates if not c[0] in ("-", "*") and not c.endswith("-")
             )
     else:
         for doc in tqdm(nlp.pipe(docs)):
             for sent in doc.sents:
-                n_words = ngrams(sent.text.split(), n=n)
-                n_grams.update(list(" ".join(words) for words in n_words))
+                for i in ns:
+                    n_words = ngrams(sent.text.split(), n=i)
+                    n_grams.update(list(" ".join(words) for words in n_words))
     return n_grams
 
 
@@ -658,9 +695,9 @@ if __name__ == "__main__":
     )
     PARSER.add_argument(
         "-n",
-        type=int,
-        default=2,
-        help="The order of the n-grams, by default 2",
+        type=str,
+        default="2-3",
+        help="The order of the n-grams, by default 2-3",
     )
     PARSER.add_argument(
         "--threshold",
