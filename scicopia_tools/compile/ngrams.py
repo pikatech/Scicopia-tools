@@ -535,6 +535,29 @@ def trim_ngrams(ngrams: Counter, threshold: int = 2) -> Counter:
     return Counter({k: v for k, v in ngrams.items() if v >= threshold})
 
 
+def weight_ngrams(ngrams: Counter) -> Counter:
+    """
+    Re-weight the n-grams according to their length
+    using the formula
+
+        n**n*freq(n-gram) if len(s) >= 2
+                             else freq(s)
+
+    Parameters
+    ----------
+    ngrams : Counter
+        A Counter of strings, in this case n-grams
+
+    Returns
+    -------
+    Counter
+        A Counter of re-weighted frequencies
+    """
+    # TODO: If Python 3.8 becomes the minimum version
+    # this expression can be rewritten with a walrus operator
+    return Counter({k: len(k.split()) ** len(k.split()) * v for k, v in ngrams.items()})
+
+
 def ngrams(iterable: Iterable, n=3):
     """
     Generate an iterator returning a sequence of adjacent items
@@ -632,7 +655,9 @@ def export_ngrams(
             # some n-grams are part of bigger m-grams and might
             # start or end with a '-' because of that
             n_grams.update(
-                c for c in candidates if not c[0] in ("-", "*", "%") and not c.endswith("-")
+                c
+                for c in candidates
+                if not c[0] in ("-", "*", "%") and not c.endswith("-")
             )
     else:
         for doc in tqdm(nlp.pipe(docs)):
@@ -707,6 +732,11 @@ if __name__ == "__main__":
         default=0,
         help="A threshold for n-gram frequencies to be kept, by default 0",
     )
+    PARSER.add_argument(
+        "--weighting",
+        action="store_true",
+        help="Should the frequenies be re-weighted by their n-gram lengths?",
+    )
     ARGS = PARSER.parse_args()
     try:
         arango_access = setup()
@@ -728,4 +758,6 @@ if __name__ == "__main__":
                 pass
             else:
                 frequencies = trim_ngrams(frequencies)
+            if ARGS.weighting:
+                frequencies = weight_ngrams(frequencies)
             zstd_pickle(ARGS.output, frequencies)

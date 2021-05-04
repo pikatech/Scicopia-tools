@@ -14,6 +14,7 @@ from scicopia_tools.compile.ngrams import (
     lower_ngrams,
     ngrams,
     trim_ngrams,
+    weight_ngrams,
 )
 
 
@@ -139,7 +140,7 @@ def test_bi_trigram_hyphen_filter(pipeline):
         }
     )
 
-    bigrams = export_ngrams(text, pipeline, n="2-4", patterns=True)
+    bigrams = export_ngrams(text, pipeline, n="2-3", patterns=True)
     assert bigrams == counts
 
 
@@ -157,3 +158,23 @@ def test_bi_trigram_filter(pipeline):
 
     bi_trigrams = export_ngrams(text, pipeline, n="2-4", patterns=True)
     assert bi_trigrams == counts
+
+
+def test_bi_trigram_filter():
+    counts = Counter(
+        {
+            "word": 23,
+            "another bi-gram": 12,
+            "my favourite tri-gram": 100,
+            "Simultaneous Localization and Mapping": 7,
+        }
+    )
+    expected = Counter(
+        {
+            "word": 23,
+            "another bi-gram": 48,
+            "my favourite tri-gram": 2700,
+            "Simultaneous Localization and Mapping": 1792,
+        }
+    )
+    assert weight_ngrams(counts) == expected
