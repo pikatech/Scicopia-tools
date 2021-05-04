@@ -632,7 +632,7 @@ def export_ngrams(
             # some n-grams are part of bigger m-grams and might
             # start or end with a '-' because of that
             n_grams.update(
-                c for c in candidates if not c[0] in ("-", "*") and not c.endswith("-")
+                c for c in candidates if not c[0] in ("-", "*", "%") and not c.endswith("-")
             )
     else:
         for doc in tqdm(nlp.pipe(docs)):

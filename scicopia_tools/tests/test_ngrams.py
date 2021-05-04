@@ -139,7 +139,7 @@ def test_bi_trigram_hyphen_filter(pipeline):
         }
     )
 
-    bigrams = export_ngrams(text, pipeline, n="2-3", patterns=True)
+    bigrams = export_ngrams(text, pipeline, n="2-4", patterns=True)
     assert bigrams == counts
 
 
