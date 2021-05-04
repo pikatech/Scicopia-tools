@@ -629,8 +629,6 @@ def export_ngrams(
                     or end == len(doc)
                 )
             )
-            for _, start, end in matches:
-                print(doc[start:end].text)
             # some n-grams are part of bigger m-grams and might
             # start or end with a '-' because of that
             n_grams.update(
@@ -718,12 +716,16 @@ if __name__ == "__main__":
     else:
         spacy_model = spacy.load("en_core_web_lg", exclude=["ner", "textcat"])
         PATTERNS = ARGS.patterns
-        frequencies = export_ngrams(db_docs, spacy_model, ARGS.n, PATTERNS)
-        frequencies = clean_ngrams(frequencies)
-        frequencies = lower_ngrams(frequencies)
-        THRESHOLD = ARGS.threshold
-        if THRESHOLD <= 0:
-            pass
+        try:
+            frequencies = export_ngrams(db_docs, spacy_model, ARGS.n, PATTERNS)
+        except ValueError as e:
+            print(f"Value of n: {e}")
         else:
-            frequencies = trim_ngrams(frequencies)
-        zstd_pickle(ARGS.output, frequencies)
+            frequencies = clean_ngrams(frequencies)
+            frequencies = lower_ngrams(frequencies)
+            THRESHOLD = ARGS.threshold
+            if THRESHOLD <= 0:
+                pass
+            else:
+                frequencies = trim_ngrams(frequencies)
+            zstd_pickle(ARGS.output, frequencies)
