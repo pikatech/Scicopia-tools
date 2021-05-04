@@ -604,6 +604,9 @@ def export_ngrams(
         # Potential ValueErrors might be raised here
         start = int(parts[0])
         end = int(parts[1])
+        if start > end:
+            # Just switch it instead of raising an error
+            end, start = start, end
         ns = range(start, end + 1)
     else:
         ns = [int(n)]
