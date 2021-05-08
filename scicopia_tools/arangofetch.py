@@ -19,6 +19,8 @@ features = {"auto_tag": AutoTagger, "split": TextSplitter}
 BATCHSIZE = 100
 
 
+logger = logging.getLogger("scicopia_tools.arangofetch")
+
 def split_batch(query, n: int):
     data = deque(maxlen=n)
     for doc in query:
@@ -35,15 +37,15 @@ def log(level: str, message: str = ""):
     if level is None:
         return
     if level == "critical":
-        logging.critical(message)
+        logger.critical(message)
     elif level == "error":
-        logging.error(message)
+        logger.error(message)
     elif level == "warning":
-        logging.warning(message)
+        logger.warning(message)
     elif level == "info":
-        logging.info(message)
+        logger.info(message)
     elif level == "debug":
-        logging.debug(message)
+        logger.debug(message)
 
 
 def worker_setup(feature, dask_worker):
@@ -73,10 +75,10 @@ def process_parallel(docs: Tuple[Dict[str, str]]):
                 updates.append(data)
             except Exception as e:
                 error = f"Exception occurred while processing document {doc['_key']}: {str(e)}"
-                logging.error(error)
+                logger.error(error)
                 return ("error", error)
         else:
-            print(f"Document {doc['_key']} has None for {worker.feature}")
+            logger.debug(f"Document {doc['_key']} has None for {worker.feature}")
     try:
         worker.collection.bulkSave(updates, details=True, onDuplicate="update")
     except UpdateError as e:
@@ -108,7 +110,7 @@ class DocTransformer:
             print("The number of processes has to be greater than zero!")
             return
         if parallel > multiprocessing.cpu_count():
-            logging.warning(
+            logger.warning(
                 "Number of requested CPUs surpasses CPUs on machine: %d > %d.\nWill use all available CPUs.",
                 parallel,
                 multiprocessing.cpu_count(),
@@ -123,7 +125,7 @@ class DocTransformer:
             - query.response["extra"]["stats"]["filtered"]
         )
         if unfinished == 0:
-            logging.info("Nothing to be done. Task %s completed.", self.feature)
+            logger.info("Nothing to be done. Task %s completed.", self.feature)
             return
 
         cluster = LocalCluster(n_workers=parallel)
@@ -149,7 +151,7 @@ class DocTransformer:
             - query.response["extra"]["stats"]["filtered"]
         )
         if unfinished == 0:
-            logging.info("Nothing to be done. Task %s completed.", self.feature)
+            logger.info("Nothing to be done. Task %s completed.", self.feature)
             return
         self.analyzer = Analyzer()
         with tqdm(total=unfinished) as progress:
@@ -171,10 +173,10 @@ class DocTransformer:
                     updates.append(data)
                 except Exception as e:
                     error = f"Exception occurred while processing document {doc['_key']}: {str(e)}"
-                    logging.error(error)
+                    logger.error(error)
                     return ("error", error)
             else:
-                print(f"Document {doc['_key']} has None for {self.feature}")
+                logger.debug(f"Document {doc['_key']} has None for {self.feature}")
         try:
             self.collection.bulkSave(updates, details=True, onDuplicate="update")
         except UpdateError as e:
