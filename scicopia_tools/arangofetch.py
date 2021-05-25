@@ -3,7 +3,7 @@ import logging
 import multiprocessing
 from collections import deque
 from datetime import datetime
-from typing import Dict, Tuple
+from typing import Deque, Dict, Iterable, Tuple
 
 from dask.distributed import Client, LocalCluster, WorkerPlugin, get_worker
 from pyArango.database import Database
@@ -21,16 +21,31 @@ BATCHSIZE = 100
 
 logger = logging.getLogger("scicopia_tools.arangofetch")
 
-def split_batch(query, n: int):
+def split_batch(query: Iterable, n: int) -> Deque:
+    """
+    Split an iterable into batches of size n.
+
+    Parameters
+    ----------
+    query : Iterable
+        Any collection or other data type supporting the
+        iterator protocol
+    n : int
+        Batch size
+
+    Yields
+    -------
+    Deque
+        [description]
+    """
     data = deque(maxlen=n)
     for doc in query:
         data.append(doc)
         if len(data) == n:
             yield data.copy()
             data.clear()
-    else:
-        if data:
-            yield data
+    if data:
+        yield data
 
 
 def log(level: str, message: str = ""):
