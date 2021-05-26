@@ -1,9 +1,8 @@
 import argparse
 import logging
 import multiprocessing
-from collections import deque
 from datetime import datetime
-from typing import Deque, Dict, Iterable, Tuple
+from typing import Dict, Iterable, List, Tuple
 
 from dask.distributed import Client, LocalCluster, WorkerPlugin, get_worker
 from pyArango.database import Database
@@ -20,9 +19,10 @@ features = {"auto_tag": AutoTagger, "split": TextSplitter}
 
 logger = logging.getLogger("scicopia_tools.arangofetch")
 
-def split_batch(query: Iterable, n: int) -> Deque:
+def split_batch(query: Iterable, n: int) -> List:
     """
     Split an iterable into batches of size n.
+    An alternative implementation to Stream.partition().
 
     Parameters
     ----------
@@ -34,10 +34,10 @@ def split_batch(query: Iterable, n: int) -> Deque:
 
     Yields
     -------
-    Deque
-        [description]
+    List
+        A part of the Iterable of length at most n
     """
-    data = deque(maxlen=n)
+    data = []
     for doc in query:
         data.append(doc)
         if len(data) == n:
@@ -76,7 +76,7 @@ class TeardownPlugin(WorkerPlugin):
 
 def process_parallel(docs: Tuple[Dict[str, str]]):
     worker = get_worker()
-    updates = deque(maxlen=len(docs))
+    updates = []
     for doc in docs:
         if doc is None:
             continue
@@ -174,7 +174,7 @@ class DocTransformer:
                 progress.update(len(docs))
 
     def process_doc(self, docs: Tuple[Dict[str, str]]):
-        updates = deque(maxlen=len(docs))
+        updates = []
         for doc in docs:
             if doc is None:
                 continue
