@@ -16,7 +16,6 @@ from scicopia_tools.analyzers.TextSplitter import TextSplitter
 from scicopia_tools.db.arango import setup
 
 features = {"auto_tag": AutoTagger, "split": TextSplitter}
-BATCHSIZE = 100
 
 
 logger = logging.getLogger("scicopia_tools.arangofetch")
@@ -102,14 +101,14 @@ def process_parallel(docs: Tuple[Dict[str, str]]):
         updates.clear()
 
 
-def generate_query(collection: str, db: Database, Analyzer):
+def generate_query(collection: str, db: Database, Analyzer, batch_size: int):
     # TODO: change to work with multiple doc_sections
     if isinstance(Analyzer.doc_section, list):
         AQL = f"FOR x IN {collection} FILTER x.{Analyzer.field} == null AND {Analyzer.doc_section} ANY IN ATTRIBUTES(x) RETURN {{ '_key': x._key, 'doc_section': x }}"
-        return db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
+        return db.AQLQuery(AQL, rawResults=True, batchSize=batch_size, ttl=3600)
     else:
         AQL = f"FOR x IN {collection} FILTER x.{Analyzer.field} == null and x.{Analyzer.doc_section} != null RETURN {{ '_key': x._key, 'doc_section': x.{Analyzer.doc_section} }}"
-        return db.AQLQuery(AQL, rawResults=True, batchSize=BATCHSIZE, ttl=3600)
+        return db.AQLQuery(AQL, rawResults=True, batchSize=batch_size, ttl=3600)
 
 
 class DocTransformer:
@@ -120,7 +119,7 @@ class DocTransformer:
     def teardown(self):
         self.connection.disconnectSession()
 
-    def parallel_main(self, parallel: int):
+    def parallel_main(self, parallel: int, batch_size: int):
         if parallel <= 0:
             print("The number of processes has to be greater than zero!")
             return
@@ -134,7 +133,7 @@ class DocTransformer:
 
         # Leave early, if there is nothing to be done
         Analyzer = features[self.feature]
-        query = generate_query(self.collection.name, self.db, Analyzer)
+        query = generate_query(self.collection.name, self.db, Analyzer, batch_size)
         unfinished = (
             query.response["extra"]["stats"]["scannedFull"]
             - query.response["extra"]["stats"]["filtered"]
@@ -152,13 +151,13 @@ class DocTransformer:
         source = Stream()
         source.scatter().map(process_parallel).buffer(parallel * 2).gather().sink(log)
         with tqdm(total=unfinished) as progress:
-            for docs in split_batch(query, BATCHSIZE):
+            for docs in split_batch(query, batch_size):
                 source.emit(docs)
                 progress.update(len(docs))
                 # if not query.response["hasMore"]:
                 #     break
 
-    def main(self) -> None:
+    def main(self, batch_size: int) -> None:
         Analyzer = features[self.feature]
         query = generate_query(self.collection.name, self.db, Analyzer)
         unfinished = (
@@ -170,7 +169,7 @@ class DocTransformer:
             return
         self.analyzer = Analyzer()
         with tqdm(total=unfinished) as progress:
-            for docs in split_batch(query, BATCHSIZE):
+            for docs in split_batch(query, batch_size):
                 self.process_doc(docs)
                 progress.update(len(docs))
 
@@ -214,10 +213,13 @@ if __name__ == "__main__":
         type=int,
         help="Distribute the computation on multiple cores",
     )
+    PARSER.add_argument(
+        "--batch", type=int, help="Batch size of bulk import", default=100
+    )
     ARGS = PARSER.parse_args()
     transformer = DocTransformer(ARGS.feature)
     if ARGS.parallel is None:
-        transformer.main()
+        transformer.main(ARGS.batch)
     else:
-        transformer.parallel_main(ARGS.parallel)
+        transformer.parallel_main(ARGS.parallel, ARGS.batch)
     # transformer.teardown()
