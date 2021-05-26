@@ -47,21 +47,6 @@ def split_batch(query: Iterable, n: int) -> List:
         yield data
 
 
-def log(level: str, message: str = ""):
-    if level is None:
-        return
-    if level == "critical":
-        logger.critical(message)
-    elif level == "error":
-        logger.error(message)
-    elif level == "warning":
-        logger.warning(message)
-    elif level == "info":
-        logger.info(message)
-    elif level == "debug":
-        logger.debug(message)
-
-
 def worker_setup(feature, dask_worker):
     dask_worker.collection, dask_worker.connection, dask_worker.db = setup()
     dask_worker.feature = feature
@@ -149,7 +134,7 @@ class DocTransformer:
         client.run(worker_setup, self.feature)
 
         source = Stream()
-        source.scatter().map(process_parallel).gather().sink(log)
+        source.scatter().map(process_parallel).gather().sink()
         with tqdm(total=unfinished) as progress:
             for docs in split_batch(query, batch_size):
                 source.emit(docs)
