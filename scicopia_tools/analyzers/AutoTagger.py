@@ -31,8 +31,7 @@ class AutoTagger:
 
         """
         self.nlp = spacy.load(model, exclude=["ner", "textcat", "parser"])
-        config = {"punct_chars": None}
-        self.nlp.add_pipe("sentencizer", config=config)
+        self.nlp.enable_pipe("senter")
 
     def process(self, doc: str):
         """
