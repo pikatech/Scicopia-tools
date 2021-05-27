@@ -134,7 +134,9 @@ class DocTransformer:
         client.run(worker_setup, self.feature)
 
         source = Stream()
-        source.scatter().map(process_parallel).gather().sink()
+        # Sink should be a no-op, since process_parallel saves into
+        # a database
+        source.scatter().map(process_parallel).gather().sink(lambda x: None)
         with tqdm(total=unfinished) as progress:
             for docs in split_batch(query, batch_size):
                 source.emit(docs)
