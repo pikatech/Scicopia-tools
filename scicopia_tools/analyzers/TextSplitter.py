@@ -26,9 +26,8 @@ class TextSplitter:
         None.
 
         """
-        self.nlp = spacy.load(model, exclude=["ner", "textcat", "parser"])
-        config = {"punct_chars": None}
-        self.nlp.add_pipe("sentencizer", config=config)
+        self.nlp = spacy.load(model, exclude=["ner", "textcat", "parser", "lemmatizer", "tagger", "attribute_ruler"])
+        self.nlp.enable_pipe("senter")
 
     def process(self, text: str):
         """
