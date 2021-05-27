@@ -13,7 +13,7 @@ from nltk.corpus import stopwords
 
 
 class AutoTagger:
-    field = "auto_tags"
+    field = "tags"
     doc_section = "abstract"
 
     def __init__(self, model: str = "en_core_web_lg"):
@@ -49,7 +49,7 @@ class AutoTagger:
         Returns
         -------
         dict
-            "auto_tags": List of keyphrases.
+            "tags": List of keyphrases.
 
         """
         # Use a new MultiPartiteRank every time.
