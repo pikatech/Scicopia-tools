@@ -50,7 +50,7 @@ class LangDetect:
             if the language could be reliably detected and 'unk' otherwise.
 
         """
-        isReliable, textBytesFound, details = cld2.detect(doc)
+        isReliable, _, details = cld2.detect(doc)
         return {
             LangDetect.field: details[0][1] if isReliable else "unk"
         }  # ISO 639-1 Code
