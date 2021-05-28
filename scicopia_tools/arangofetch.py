@@ -14,7 +14,7 @@ from scicopia_tools.analyzers.AutoTagger import AutoTagger
 from scicopia_tools.analyzers.TextSplitter import TextSplitter
 from scicopia_tools.db.arango import setup
 
-features = {"auto_tag": AutoTagger, "split": TextSplitter}
+features = {"auto_tags": AutoTagger, "split": TextSplitter}
 
 
 logger = logging.getLogger("scicopia_tools.arangofetch")
@@ -146,7 +146,7 @@ class DocTransformer:
 
     def main(self, batch_size: int) -> None:
         Analyzer = features[self.feature]
-        query = generate_query(self.collection.name, self.db, Analyzer)
+        query = generate_query(self.collection.name, self.db, Analyzer, batch_size)
         unfinished = (
             query.response["extra"]["stats"]["scannedFull"]
             - query.response["extra"]["stats"]["filtered"]
@@ -191,7 +191,7 @@ if __name__ == "__main__":
         description="Use feature to update Arango database"
     )
     PARSER.add_argument(
-        "feature", choices=["auto_tag", "split"], help="Feature to use."
+        "feature", choices=["auto_tags", "split"], help="Feature to use."
     )
     PARSER.add_argument(
         "-p",
