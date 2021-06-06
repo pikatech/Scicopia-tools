@@ -26,7 +26,17 @@ class TextSplitter:
         None.
 
         """
-        self.nlp = spacy.load(model, exclude=["ner", "textcat", "parser", "lemmatizer", "tagger", "attribute_ruler"])
+        self.nlp = spacy.load(
+            model,
+            exclude=[
+                "ner",
+                "textcat",
+                "parser",
+                "lemmatizer",
+                "tagger",
+                "attribute_ruler",
+            ],
+        )
         self.nlp.enable_pipe("senter")
 
     def process(self, text: str):
