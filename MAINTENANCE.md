@@ -3,11 +3,17 @@
 ### 1. Parallelization / Cluster computing
 
 - dask==2021.3.0
-- dask-jobqueue==0.7.2
 - distributed==2021.3.0
+- dask-jobqueue==0.7.2
 - streamz==0.6.2
 
-https://distributed.dask.org/en/latest/queues.html
+The versions of dask and distributed should be kept in sync. Right now (2021-06-05) any version higher than 2021.3.0 leads to an error message:
+
+`ERROR: No matching distribution found for dask==2021.3.1`
+
+[Streamz](https://streamz.readthedocs.io/en/latest/dask.html) is used since dask doesn't support streaming data in queues anymore, see https://distributed.dask.org/en/latest/queues.html
+
+Scicopia-tools doesn't make use of any advanced features of it (like back pressure), so this part could probably be replaced by one of the other options detailed in the link above.
 
 ### 2. NLP toolkit
 
