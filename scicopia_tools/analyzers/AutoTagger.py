@@ -5,6 +5,7 @@ Created on Tue Feb 11 13:44:30 2020
 
 @author: tech
 """
+from scicopia_tools.analyzers import Analyzer
 import string
 
 import pke
@@ -12,7 +13,7 @@ import spacy
 from nltk.corpus import stopwords
 
 
-class AutoTagger:
+class AutoTagger(Analyzer):
     field = "tags"
     doc_section = "abstract"
 
@@ -30,10 +31,11 @@ class AutoTagger:
         None.
 
         """
+        super().__init__()
         self.nlp = spacy.load(model, exclude=["ner", "textcat", "parser"])
         self.nlp.enable_pipe("senter")
 
-    def process(self, doc: str):
+    def process(self, text: str):
         """
         Performs MultipartiteRank keyphrase extraction via pke
         (Python Keyphrase Extraction toolkit).
@@ -42,7 +44,7 @@ class AutoTagger:
 
         Parameters
         ----------
-        doc : str
+        text : str
             Text to extract keyphrases from.
 
         Returns
@@ -54,7 +56,7 @@ class AutoTagger:
         # Use a new MultiPartiteRank every time.
         # Trying to reuse one leads to a ZeroDivisionError: float division by zero
         extractor = pke.unsupervised.MultipartiteRank()
-        extractor.load_document(input=doc, encoding="utf-8", spacy_model=self.nlp)
+        extractor.load_document(input=text, encoding="utf-8", spacy_model=self.nlp)
         pos = {"NOUN", "PROPN", "ADJ"}
         stoplist = list(string.punctuation)
         stoplist += ["-lrb-", "-rrb-", "-lcb-", "-rcb-", "-lsb-", "-rsb-"]

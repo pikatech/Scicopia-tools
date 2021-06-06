@@ -5,10 +5,11 @@ Created on Tue Feb 11 13:44:30 2020
 
 @author: tech
 """
+from scicopia_tools.analyzers import Analyzer
 import spacy
 
 
-class TextSplitter:
+class TextSplitter(Analyzer):
     field = "abstract_offsets"
     doc_section = "abstract"
 
