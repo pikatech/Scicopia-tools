@@ -41,10 +41,10 @@ def split_batch(query: Iterable, n: int) -> List:
         yield data
 
 
-def worker_setup(feature, Analyzer, dask_worker):
+def worker_setup(feature, Analyzer, params, dask_worker):
     dask_worker.collection, dask_worker.connection, dask_worker.db = setup()
     dask_worker.feature = feature
-    dask_worker.analyzer = Analyzer()
+    dask_worker.analyzer = Analyzer() if params is None else Analyzer(**params)
 
 
 class TeardownPlugin(WorkerPlugin):
@@ -91,10 +91,11 @@ def generate_query(collection: str, db: Database, Analyzer, batch_size: int):
 
 
 class DocTransformer:
-    def __init__(self, feature: str, analyzer):
+    def __init__(self, feature: str, analyzer, params=None):
         self.collection, self.connection, self.db = setup()
         self.feature = feature
         self.analyzer = analyzer
+        self.params = params
 
     def teardown(self):
         self.connection.disconnectSession()
@@ -125,7 +126,7 @@ class DocTransformer:
         teardown = TeardownPlugin()
         client = Client(cluster)
         client.register_worker_plugin(teardown)
-        client.run(worker_setup, self.feature, self.analyzer)
+        client.run(worker_setup, self.feature, self.analyzer, self.params)
 
         source = Stream()
         # Sink should be a no-op, since process_parallel saves into
@@ -147,7 +148,7 @@ class DocTransformer:
         if unfinished == 0:
             logger.info("Nothing to be done. Task %s completed.", self.feature)
             return
-        self.analyzer = self.analyzer()
+        self.analyzer = self.analyzer() if self.params is None else self.analyzer(self.params)
         with tqdm(total=unfinished) as progress:
             for docs in split_batch(query, batch_size):
                 self.process_doc(docs)
