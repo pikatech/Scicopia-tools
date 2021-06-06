@@ -24,7 +24,7 @@ if __name__ == "__main__":
         help="Distribute the computation on multiple cores",
     )
     PARSER.add_argument(
-        "--batch", type=int, help="Batch size of bulk import", default=100
+        "--batch", type=int, help="Batch size of bulk import", default=1000
     )
     ARGS = PARSER.parse_args()
     transformer = DocTransformer(ARGS.feature, features[ARGS.feature])
