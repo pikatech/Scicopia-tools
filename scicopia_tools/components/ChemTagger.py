@@ -6,11 +6,13 @@ Created on Tue Jun 16 16:27:20 2020
 @author: tech
 """
 
+import argparse
 import logging
 import re  # Only used in exception handling
 from collections import namedtuple
 from functools import cmp_to_key
-from typing import Iterable, List
+from scicopia_tools.analyzers import Analyzer
+from typing import Any, Dict, Iterable, List
 
 from ahocorasick import Automaton
 from intervaltree import IntervalTree
@@ -18,6 +20,7 @@ from spacy.language import Language
 from spacy.parts_of_speech import NOUN
 from spacy.tokens import Span
 
+from scicopia_tools.db.parallel import DocTransformer
 
 Annotation = namedtuple("Annotation", ["name", "label", "start", "end"])
 
@@ -34,14 +37,15 @@ might_be_nouns = [
     "Leads",
 ]
 
-
 @Language.factory("chemtagger", default_config={"wordlist": []})
 def my_component(nlp, name, wordlist: str):
     return ChemTagger(wordlist)
 
 
-class ChemTagger:
+class ChemTagger(Analyzer):
 
+    field = "chemicals"
+    doc_section = "abstract"
     name = "dictionary_tagger"
 
     def __init__(self, wordlist: str, label="CHEMICAL", finalize: bool = True):
@@ -51,6 +55,7 @@ class ChemTagger:
         :param wordlist: An open file with one entity per line.
 
         """
+        super().__init__()
         automaton = Automaton()
         with open(wordlist, "rt") as chemicals:
             for line in chemicals:
@@ -97,6 +102,9 @@ class ChemTagger:
         annotations.sort(key=self.EntityKey)
         annotations = ChemTagger.remove_overlap(annotations)
         return self.retokenize(doc, annotations)
+    
+    def process(self, text: str) -> Dict[str, Any]:
+        return {}
 
     def retokenize(self, doc, annotations):
         start = [token.idx for token in doc]
@@ -222,3 +230,28 @@ class ChemTagger:
             start = entity.start
             end = entity.end
         return filtered
+
+
+if __name__ == "__main__":
+    PARSER = argparse.ArgumentParser(
+        description="Use feature to update Arango database"
+    )
+    PARSER.add_argument(
+        "dictionary", type=str, help="Path to the list of chemicals"
+    )
+    PARSER.add_argument(
+        "-p",
+        "--parallel",
+        metavar="N",
+        type=int,
+        help="Distribute the computation on multiple cores",
+    )
+    PARSER.add_argument(
+        "--batch", type=int, help="Batch size of bulk import", default=100
+    )
+    ARGS = PARSER.parse_args()
+    transformer = DocTransformer("chem_ner", ChemTagger, {"wordlist": ARGS.dictionary})
+    if ARGS.parallel is None:
+        transformer.main(ARGS.batch)
+    else:
+        transformer.parallel_main(ARGS.parallel, ARGS.batch)

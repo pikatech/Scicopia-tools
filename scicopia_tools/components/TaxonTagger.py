@@ -11,6 +11,7 @@ import re  # Only used in exception handling
 from collections import namedtuple
 from functools import cmp_to_key
 from pathlib import Path
+from scicopia_tools.analyzers import Analyzer
 from typing import Iterable, List
 
 from ahocorasick import Automaton
@@ -60,8 +61,10 @@ def my_component(nlp, name, wordlist: str):
     return TaxonTagger(wordlist)
 
 
-class TaxonTagger:
+class TaxonTagger(Analyzer):
 
+    field = "taxa"
+    doc_section = "abstract"
     label = "TAXON"
     name = "taxon_tagger"
 
@@ -72,6 +75,7 @@ class TaxonTagger:
         :param wordlist: An open file with one entity per line.
 
         """
+        super().__init__()
         automaton = Automaton()
         lifeforms = dict()
         with open(wordlist, "rt") as taxa:
