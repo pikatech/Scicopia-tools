@@ -27,6 +27,7 @@ class TextSplitter(Analyzer):
         None.
 
         """
+        super().__init__()
         self.nlp = spacy.load(
             model,
             exclude=[
